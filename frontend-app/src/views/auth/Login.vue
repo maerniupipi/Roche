@@ -1,0 +1,1233 @@
+<template>
+  <div class="login-layout">
+    <div class="animated-bg">
+      <div class="knowledge-node node-1">
+        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+        </svg>
+      </div>
+      <div class="knowledge-node node-2">
+        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+        </svg>
+      </div>
+      <div class="knowledge-node node-3">
+        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5z" />
+          <path d="M2 17l10 5 10-5" />
+          <path d="M2 12l10 5 10-5" />
+        </svg>
+      </div>
+      <div class="knowledge-node node-4">
+        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <ellipse cx="12" cy="5" rx="9" ry="3" />
+          <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+          <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+        </svg>
+      </div>
+      <div class="knowledge-node node-5">
+        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.35-4.35" />
+        </svg>
+      </div>
+      <div class="knowledge-node node-6">
+        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path
+            d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+          <line x1="12" y1="22.08" x2="12" y2="12" />
+        </svg>
+      </div>
+      <div class="knowledge-node node-7">
+        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+        </svg>
+      </div>
+      <div class="knowledge-node node-8">
+        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+      </div>
+      <div class="knowledge-node node-9">
+        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+      </div>
+      <div class="knowledge-node node-10">
+        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3" />
+          <path
+            d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24" />
+        </svg>
+      </div>
+      <div class="knowledge-node node-11">
+        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 11l3 3L22 4" />
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+        </svg>
+      </div>
+      <div class="knowledge-node node-12">
+        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon
+            points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+        </svg>
+      </div>
+
+      <svg class="knowledge-lines" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <line class="connection-line line-1" x1="20" y1="15" x2="35" y2="25" />
+        <line class="connection-line line-2" x1="35" y1="25" x2="55" y2="20" />
+        <line class="connection-line line-3" x1="55" y1="20" x2="85" y2="12" />
+        <line class="connection-line line-4" x1="8" y1="35" x2="25" y2="45" />
+        <line class="connection-line line-5" x1="25" y1="45" x2="65" y2="48" />
+        <line class="connection-line line-6" x1="20" y1="60" x2="60" y2="75" />
+        <line class="connection-line line-7" x1="20" y1="15" x2="20" y2="60" />
+        <line class="connection-line line-8" x1="55" y1="20" x2="45" y2="50" />
+        <line class="connection-line line-9" x1="65" y1="48" x2="90" y2="38" />
+        <line class="connection-line line-10" x1="40" y1="70" x2="75" y2="80" />
+        <line class="connection-line line-11" x1="35" y1="25" x2="25" y2="45" />
+        <line class="connection-line line-12" x1="75" y1="30" x2="65" y2="48" />
+      </svg>
+    </div>
+
+    <div class="header-logo" aria-label="Roche Knowledge Agent Platform">
+      <span class="brand-name">ROCHE</span>
+      <span class="brand-product">Knowledge Agent Platform</span>
+    </div>
+
+    <!-- Left Showcase Section -->
+    <div class="showcase-section">
+      <div class="showcase-content">
+        <p class="showcase-subtitle">{{ $t('platform.subtitle') }}</p>
+        <p class="showcase-description">{{ $t('platform.description') }}</p>
+
+        <div class="feature-tags">
+          <span class="tag">{{ $t('platform.rag') }}</span>
+          <span class="tag">{{ $t('platform.agent') }}</span>
+          <span class="tag">{{ $t('platform.hybridSearch') }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Form Section -->
+    <div class="form-section">
+      <div class="form-panel">
+        <div class="form-card" v-if="!isRegisterMode">
+          <div class="form-header">
+            <h2 class="form-title">{{ $t('auth.login') }}</h2>
+            <p class="form-welcome">{{ $t('auth.subtitle') }}</p>
+          </div>
+
+          <div class="form-content">
+            <t-form ref="formRef" :data="formData" :rules="formRules" @submit="handleLogin" layout="vertical">
+              <t-form-item :label="$t('auth.email')" name="email">
+                <t-input v-model="formData.email" :placeholder="$t('auth.emailPlaceholder')" type="text"
+                  autocomplete="email" size="large" :disabled="loading" />
+              </t-form-item>
+
+              <t-form-item :label="$t('auth.password')" name="password">
+                <t-input v-model="formData.password" :placeholder="$t('auth.passwordPlaceholder')" type="password"
+                  autocomplete="current-password" size="large" :disabled="loading" @enter="handleLogin" />
+              </t-form-item>
+
+              <t-button type="submit" theme="primary" size="large" block :loading="loading" class="submit-button">
+                {{ loading ? $t('auth.loggingIn') : $t('auth.login') }}
+              </t-button>
+
+              <div v-if="registrationEnabled" class="form-footer">
+                <span>{{ $t('auth.noAccount') }}</span>
+                <a href="#" @click.prevent="toggleMode" class="link-button">{{ $t('auth.registerNow') }}</a>
+              </div>
+
+              <div v-if="samlEnabled" class="saml-divider">
+                <span>{{ $t('auth.orContinueWith') }}</span>
+              </div>
+
+              <t-button v-if="samlEnabled" type="button" theme="default" size="large" block :loading="samlLoading"
+                :disabled="loading" class="saml-button" @click.prevent.stop="handleSAMLLogin">
+                {{ samlLoading ? $t('auth.redirectingToSAML') : samlLoginText }}
+              </t-button>
+            </t-form>
+
+            <!-- Features list -->
+            <div class="login-features">
+              <div class="feature-item">
+                <span class="feature-icon">✓</span>
+                <span class="feature-text">{{ $t('platform.multimodalParsing') }}</span>
+              </div>
+              <div class="feature-item">
+                <span class="feature-icon">✓</span>
+                <span class="feature-text">{{ $t('platform.hybridSearchEngine') }}</span>
+              </div>
+              <div class="feature-item">
+                <span class="feature-icon">✓</span>
+                <span class="feature-text">{{ $t('platform.ragQandA') }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-card" v-else>
+          <div class="form-header">
+            <h2 class="form-title">{{ $t('auth.createAccount') }}</h2>
+            <p class="form-welcome">{{ $t('auth.registerSubtitle') }}</p>
+          </div>
+
+          <div class="form-content">
+            <t-form ref="registerFormRef" :data="registerData" :rules="registerRules" @submit="handleRegister"
+              layout="vertical">
+              <t-form-item :label="$t('auth.username')" name="username">
+                <t-input v-model="registerData.username" :placeholder="$t('auth.usernamePlaceholder')" size="large"
+                  :disabled="loading" />
+              </t-form-item>
+
+              <t-form-item :label="$t('auth.email')" name="email">
+                <t-input v-model="registerData.email" :placeholder="$t('auth.emailPlaceholder')" type="text"
+                  autocomplete="email" size="large" :disabled="loading" />
+              </t-form-item>
+
+              <t-form-item :label="$t('auth.password')" name="password">
+                <t-input v-model="registerData.password" :placeholder="$t('auth.passwordPlaceholder')" type="password"
+                  autocomplete="new-password" size="large" :disabled="loading" />
+              </t-form-item>
+
+              <t-form-item :label="$t('auth.confirmPassword')" name="confirmPassword">
+                <t-input v-model="registerData.confirmPassword" :placeholder="$t('auth.confirmPasswordPlaceholder')"
+                  type="password" autocomplete="new-password" size="large" :disabled="loading" @enter="handleRegister" />
+              </t-form-item>
+
+              <t-form-item v-if="registrationRoleSelectionEnabled" :label="$t('auth.registrationRoleLabel')" name="role">
+                <div class="role-picker-trigger" @click="rolePopupVisible = true">
+                  <span :class="['role-picker-trigger__value', { 'is-placeholder': !currentRoleLabel }]">
+                    {{ currentRoleLabel || $t('auth.registrationRolePlaceholder') }}
+                  </span>
+                  <t-icon name="chevron-right" class="role-picker-trigger__arrow" />
+                </div>
+                <t-popup
+                  v-model:visible="rolePopupVisible"
+                  placement="bottom"
+                  :close-on-overlay-click="true"
+                  :destroy-on-close="true"
+                >
+                  <t-picker
+                    :model-value="rolePickerValue"
+                    @update:model-value="onRolePickerChange"
+                    @confirm="onRolePickerConfirm"
+                    @cancel="rolePopupVisible = false"
+                    :columns="registrationRoleColumns"
+                    :title="$t('auth.registrationRoleLabel')"
+                  />
+                </t-popup>
+                <div class="field-hint">{{ $t('auth.registrationRoleHint') }}</div>
+              </t-form-item>
+
+              <t-button type="submit" theme="primary" size="large" block :loading="loading" class="submit-button">
+                {{ loading ? $t('auth.registering') : $t('auth.register') }}
+              </t-button>
+            </t-form>
+
+            <div class="form-footer">
+              <span>{{ $t('auth.haveAccount') }}</span>
+              <a href="#" @click.prevent="toggleMode" class="link-button">{{ $t('auth.backToLogin') }}</a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, reactive, nextTick, onMounted, onBeforeUnmount, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { MessagePlugin } from 'tdesign-mobile-vue'
+import type { FormRules } from 'tdesign-mobile-vue'
+import { notifyLoginSuccess } from '@/utils/loginNotify'
+import {
+  login,
+  register,
+  getRegistrationConfig,
+  getSAMLAuthorizationURL,
+  getSAMLConfig,
+  autoSetup,
+  userInfoFromApi,
+  type RegistrationRole,
+} from '@/api/auth'
+import { useAuthStore } from '@/stores/auth'
+import { useI18n } from 'vue-i18n'
+import { getFrontendSSOCallbackURL } from '@/utils/sso'
+
+const router = useRouter()
+const authStore = useAuthStore()
+const { t, tm, locale } = useI18n()
+
+// Form references
+const formRef = ref()
+const registerFormRef = ref()
+
+// State management
+const loading = ref(false)
+const samlLoading = ref(false)
+const isRegisterMode = ref(false)
+const samlEnabled = ref(false)
+const samlProviderName = ref('')
+const registrationEnabled = ref(false)
+const registrationRoleSelectionEnabled = ref(false)
+const availableRegistrationRoles = ref<RegistrationRole[]>([])
+
+const samlLoginText = computed(() => {
+  if (samlProviderName.value) {
+    return t('auth.samlLoginWithProvider', { provider: samlProviderName.value })
+  }
+  return t('auth.samlLogin')
+})
+
+// Login form data
+const formData = reactive<{ [key: string]: any }>({
+  email: '',
+  password: '',
+})
+
+const registerData = reactive<{
+  username: string
+  email: string
+  password: string
+  confirmPassword: string
+  role: RegistrationRole
+}>({
+  username: '',
+  email: '',
+  password: '',
+  confirmPassword: '',
+  role: 'viewer',
+})
+
+// Login form validation rules
+const formRules = computed<FormRules>(() => ({
+  email: [
+    { required: true, message: t('auth.emailRequired'), type: 'error' },
+    { email: true, message: t('auth.emailInvalid'), type: 'error' }
+  ],
+  password: [
+    { required: true, message: t('auth.passwordRequired'), type: 'error' },
+    { min: 8, message: t('auth.passwordMinLength'), type: 'error' },
+    { max: 32, message: t('auth.passwordMaxLength'), type: 'error' },
+    { pattern: /[a-zA-Z]/, message: t('auth.passwordMustContainLetter'), type: 'error' },
+    { pattern: /\d/, message: t('auth.passwordMustContainNumber'), type: 'error' }
+  ]
+}))
+
+const registerRules = computed<FormRules>(() => ({
+  username: [
+    { required: true, message: t('auth.usernameRequired'), type: 'error' },
+    { min: 2, message: t('auth.usernameMinLength'), type: 'error' },
+    { max: 50, message: t('auth.usernameMaxLength'), type: 'error' },
+    { pattern: /^[a-zA-Z0-9_\u4e00-\u9fa5]+$/, message: t('auth.usernameInvalid'), type: 'error' },
+  ],
+  email: formRules.value.email,
+  password: formRules.value.password,
+  confirmPassword: [
+    { required: true, message: t('auth.confirmPasswordRequired'), type: 'error' },
+    {
+      validator: (value: string) => value === registerData.password,
+      message: t('auth.passwordMismatch'),
+      type: 'error',
+    },
+  ],
+  role: registrationRoleSelectionEnabled.value
+    ? [{ required: true, message: t('auth.registrationRoleRequired'), type: 'error' }]
+    : [],
+}))
+
+const toggleMode = () => {
+  isRegisterMode.value = !isRegisterMode.value
+  registerData.username = ''
+  registerData.email = ''
+  registerData.password = ''
+  registerData.confirmPassword = ''
+}
+
+// 登录页不再提供语言切换：语言切换统一在登录后顶部 PlatformHeader 进行
+const persistLoginResponse = async (response: any) => {
+  if (response.user && response.token) {
+    authStore.setUser(userInfoFromApi(response.user))
+    authStore.setToken(response.token)
+  }
+
+  await nextTick()
+  router.replace('/platform/creatChat')
+}
+
+const loadSAMLConfig = async () => {
+  try {
+    const response = await getSAMLConfig()
+    samlEnabled.value = !!response.success && !!response.enabled
+    samlProviderName.value = response.provider_display_name || ''
+  } catch {
+    samlEnabled.value = false
+    samlProviderName.value = ''
+  }
+}
+
+const loadRegistrationConfig = async () => {
+  try {
+    const response = await getRegistrationConfig()
+    registrationEnabled.value = !!response.success && !!response.enabled
+    registrationRoleSelectionEnabled.value = registrationEnabled.value && !!response.role_selection_enabled
+    availableRegistrationRoles.value = Array.isArray(response.roles) ? response.roles : []
+    registerData.role = response.default_role || 'viewer'
+  } catch {
+    registrationEnabled.value = false
+    registrationRoleSelectionEnabled.value = false
+    availableRegistrationRoles.value = []
+  }
+}
+
+const handleSAMLLogin = async () => {
+  try {
+    samlLoading.value = true
+    const response = await getSAMLAuthorizationURL(getFrontendSSOCallbackURL())
+    const authorizationURL = response.authorization_url
+
+    if (!response.success || !authorizationURL) {
+      MessagePlugin.error(response.message || t('auth.samlLoginFailed'))
+      return
+    }
+
+    window.location.href = authorizationURL
+  } catch (error: any) {
+    console.error('SAML 登录跳转失败:', error)
+    MessagePlugin.error(error.message || t('auth.samlLoginFailed'))
+  } finally {
+    samlLoading.value = false
+  }
+}
+
+const handleRegister = async () => {
+  try {
+    const valid = await registerFormRef.value?.validate()
+    if (valid !== true) return
+
+    loading.value = true
+    const response = await register({
+      username: registerData.username,
+      email: registerData.email,
+      password: registerData.password,
+      role: registrationRoleSelectionEnabled.value ? registerData.role : undefined,
+    })
+    if (!response.success) {
+      MessagePlugin.error(response.message || t('auth.registerFailed'))
+      return
+    }
+
+    MessagePlugin.success(t('auth.registerSuccess'))
+    formData.email = registerData.email
+    isRegisterMode.value = false
+    registerData.username = ''
+    registerData.password = ''
+    registerData.confirmPassword = ''
+  } catch (error: any) {
+    console.error('Registration failed:', error)
+    MessagePlugin.error(error.message || t('auth.registerError'))
+  } finally {
+    loading.value = false
+  }
+}
+
+// Handle login
+const handleLogin = async () => {
+  try {
+    const valid = await formRef.value?.validate()
+    if (valid !== true) return
+
+    loading.value = true
+
+    const response = await login({
+      email: formData.email,
+      password: formData.password,
+    })
+
+    if (response.success) {
+      await persistLoginResponse(response)
+      notifyLoginSuccess(response, t, tm)
+    } else {
+      MessagePlugin.error(response.message || t('auth.loginError'))
+    }
+  } catch (error: any) {
+    console.error('登录错误:', error)
+    MessagePlugin.error(error.message || t('auth.loginErrorRetry'))
+  } finally {
+    loading.value = false
+  }
+}
+
+// Check if already logged in; for lite edition, attempt transparent auto-setup
+onMounted(async () => {
+  if (authStore.isLoggedIn) {
+    router.replace('/platform/creatChat')
+    return
+  }
+
+  const AUTO_SETUP_FAILED_KEY = 'roche_kap_auto_setup_failed'
+  if (localStorage.getItem(AUTO_SETUP_FAILED_KEY) !== 'true') {
+    try {
+      const response = await autoSetup()
+      if (response.success) {
+        authStore.setLiteMode(true)
+        await persistLoginResponse(response)
+        return
+      } else {
+        localStorage.setItem(AUTO_SETUP_FAILED_KEY, 'true')
+      }
+    } catch {
+      localStorage.setItem(AUTO_SETUP_FAILED_KEY, 'true')
+    }
+  }
+
+  await Promise.all([loadRegistrationConfig(), loadSAMLConfig()])
+})
+
+const registrationRoleOptions = computed(() => {
+  const roles = availableRegistrationRoles.value.length > 0
+    ? availableRegistrationRoles.value
+    : ['viewer', 'system_admin'] as RegistrationRole[]
+  return roles.map(role => ({ value: role, label: t(`auth.registrationRoles.${role}`) }))
+})
+
+// t-picker 的 columns 格式（mobile-vue）：Array<PickerColumnItem>，
+// 与 desktop t-select 的 options 形状 ({value, label}) 兼容，直接复用。
+const registrationRoleColumns = registrationRoleOptions
+
+// 角色选择弹层显隐与当前选中项展示
+const rolePopupVisible = ref(false)
+const currentRoleLabel = computed(() => {
+  const match = registrationRoleOptions.value.find(o => o.value === registerData.role)
+  return match?.label ?? ''
+})
+
+// t-picker 的 modelValue 是 Array<PickerValue>（单列也是数组），需要适配到
+// registerData.role 的 string 形态。下面两个 handler 提供 get/set 适配。
+const rolePickerValue = computed<string[]>(() =>
+  registerData.role ? [registerData.role] : []
+)
+const onRolePickerChange = (value: string[]) => {
+  // 滚动 wheel 时只更新临时显示，关闭弹层时由 onRolePickerConfirm 提交
+  const next = value[0]
+  if (next === 'viewer' || next === 'system_admin') {
+    registerData.role = next
+  }
+}
+const onRolePickerConfirm = () => {
+  // registerData.role 已通过 onRolePickerChange 同步；此处只关弹层
+  rolePopupVisible.value = false
+}
+</script>
+
+<style lang="less" scoped>
+.login-layout {
+  display: flex;
+  width: 100%;
+  min-height: 100%;
+  overflow: hidden;
+  position: relative;
+  background: linear-gradient(225deg, #022366 0%, #062D95 15%, #0835AB 25%, #0937B0 38%, #0B41CD 50%, #6488E6 65%, #1482FA 78%, #9ECBFE 90%, #BDE3FF 100%);
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.06) 0%, transparent 50%),
+      radial-gradient(circle at 80% 50%, rgba(255, 255, 255, 0.04) 0%, transparent 50%);
+    pointer-events: none;
+  }
+}
+
+.animated-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+  contain: strict;
+}
+
+.knowledge-node {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow:
+    0 0 15px rgba(255, 255, 255, 0.35),
+    0 0 30px rgba(20, 130, 250, 0.2),
+    inset 0 0 8px rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: nodePulse 5s infinite ease-in-out;
+  will-change: transform, opacity;
+}
+
+.node-icon {
+  width: 20px;
+  height: 20px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.node-1 {
+  top: 15%;
+  left: 20%;
+  animation-delay: 0s;
+}
+
+.node-2 {
+  top: 25%;
+  left: 35%;
+  animation-delay: 0.5s;
+}
+
+.node-3 {
+  top: 20%;
+  left: 55%;
+  animation-delay: 1s;
+}
+
+.node-4 {
+  top: 30%;
+  left: 75%;
+  animation-delay: 1.5s;
+}
+
+.node-5 {
+  top: 45%;
+  left: 25%;
+  animation-delay: 2s;
+}
+
+.node-6 {
+  top: 50%;
+  left: 45%;
+  animation-delay: 2.5s;
+}
+
+.node-7 {
+  top: 48%;
+  left: 65%;
+  animation-delay: 3s;
+}
+
+.node-8 {
+  top: 60%;
+  left: 20%;
+  animation-delay: 0.3s;
+}
+
+.node-9 {
+  top: 12%;
+  right: 15%;
+  animation-delay: 1.8s;
+}
+
+.node-10 {
+  top: 38%;
+  right: 10%;
+  animation-delay: 2.3s;
+}
+
+.node-11 {
+  top: 70%;
+  left: 40%;
+  animation-delay: 0.8s;
+}
+
+.node-12 {
+  top: 65%;
+  left: 80%;
+  animation-delay: 1.3s;
+}
+
+@keyframes nodePulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.65;
+  }
+
+  50% {
+    transform: scale(1.08);
+    opacity: 0.9;
+  }
+}
+
+.knowledge-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.35;
+}
+
+.connection-line {
+  stroke: rgba(255, 255, 255, 0.5);
+  stroke-width: 1.5;
+  stroke-dasharray: 6, 3;
+  stroke-linecap: round;
+  animation: lineFlow 10s infinite linear;
+  will-change: stroke-dashoffset;
+}
+
+.line-1 {
+  animation-delay: 0s;
+}
+
+.line-2 {
+  animation-delay: 0.5s;
+}
+
+.line-3 {
+  animation-delay: 1s;
+}
+
+.line-4 {
+  animation-delay: 0.3s;
+}
+
+.line-5 {
+  animation-delay: 0.8s;
+}
+
+.line-6 {
+  animation-delay: 1.3s;
+}
+
+.line-7 {
+  animation-delay: 1.8s;
+}
+
+.line-8 {
+  animation-delay: 2.3s;
+}
+
+.line-9 {
+  animation-delay: 0.2s;
+}
+
+.line-10 {
+  animation-delay: 0.7s;
+}
+
+.line-11 {
+  animation-delay: 0.9s;
+}
+
+.line-12 {
+  animation-delay: 1.5s;
+}
+
+@keyframes lineFlow {
+  0% {
+    stroke-dashoffset: 0;
+  }
+
+  100% {
+    stroke-dashoffset: 18;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .knowledge-node {
+    animation: none;
+    opacity: 0.65;
+  }
+
+  .connection-line {
+    animation: none;
+  }
+}
+
+/* Left Showcase Section */
+.showcase-section {
+  flex: 0 0 52%;
+  display: flex;
+  align-items: flex-end;
+  padding: 100px 30px 100px 50px;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.showcase-content {
+  width: 100%;
+  max-width: 600px;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 60px;
+}
+
+.showcase-subtitle {
+  margin-top: 0;
+  font-size: 22px;
+  color: rgba(255, 255, 255, 0.95);
+  margin: 0 0 8px 0;
+  font-family: var(--app-font-family);
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.showcase-description {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0 0 28px 0;
+  font-family: var(--app-font-family);
+  line-height: 1.5;
+}
+
+.feature-tags {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 40px;
+  flex-wrap: wrap;
+}
+
+.tag {
+  display: inline-block;
+  padding: 8px 20px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  color: var(--td-text-color-anti);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: var(--app-font-family);
+}
+
+/* Right Form Section */
+.form-section {
+  flex: 0 0 48%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 40px 50px 100px 30px;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.form-panel {
+  width: 100%;
+  max-width: 480px;
+  margin-bottom: 60px;
+  position: relative;
+  z-index: 2;
+}
+
+.header-logo {
+  position: fixed;
+  top: 32px;
+  left: 50px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--td-text-color-anti);
+
+  .brand-name {
+    font-size: 26px;
+    line-height: 1;
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+
+  .brand-product {
+    font-size: 11px;
+    line-height: 1.2;
+    font-weight: 500;
+    opacity: 0.84;
+  }
+}
+
+.form-card {
+  background: rgba(255, 255, 255, 0.97);
+  border-radius: 16px;
+  padding: 40px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  box-sizing: border-box;
+  border: none;
+  width: 100%;
+}
+
+.form-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.form-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--td-text-color-primary);
+  margin: 0 0 6px 0;
+  font-family: var(--app-font-family);
+}
+
+.form-welcome {
+  font-size: 13px;
+  color: var(--td-text-color-secondary);
+  margin: 0;
+  font-family: var(--app-font-family);
+}
+
+.form-content {
+  :deep(.t-form-item__label) {
+    font-size: 14px;
+    color: var(--td-text-color-primary);
+    font-weight: 500;
+    margin-bottom: 8px;
+    font-family: var(--app-font-family);
+    display: block;
+    text-align: left;
+  }
+
+  :deep(.t-input) {
+    border: 1px solid var(--td-component-stroke);
+    border-radius: 8px;
+    background: var(--td-bg-color-container);
+    transition: all 0.2s;
+
+    &:focus-within {
+      border-color: var(--td-brand-color);
+      box-shadow: 0 0 0 3px rgba(11, 65, 205, 0.1);
+    }
+
+    &:hover {
+      border-color: var(--td-brand-color);
+    }
+
+    .t-input__inner {
+      border: none !important;
+      box-shadow: none !important;
+      outline: none !important;
+      background: transparent;
+      font-size: 15px;
+      font-family: var(--app-font-family);
+
+      &:focus {
+        border: none !important;
+        box-shadow: none !important;
+        outline: none !important;
+      }
+    }
+
+    .t-input__wrap {
+      border: none !important;
+      box-shadow: none !important;
+    }
+  }
+
+  :deep(.t-form-item) {
+    margin-bottom: 18px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  :deep(.t-form-item__control) {
+    width: 100%;
+  }
+}
+
+.submit-button {
+  height: 46px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  font-family: var(--app-font-family);
+  margin: 20px 0 16px 0;
+}
+
+.saml-divider {
+  position: relative;
+  margin: 4px 0 6px;
+  text-align: center;
+  color: var(--td-text-color-placeholder);
+  font-size: 12px;
+
+  span {
+    position: relative;
+    z-index: 1;
+    padding: 0 12px;
+    background: rgba(255, 255, 255, 0.95);
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    border-top: 1px solid var(--td-component-stroke);
+  }
+}
+
+.saml-button {
+  height: 46px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.field-hint {
+  margin-top: 6px;
+  color: var(--td-text-color-placeholder);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+// 角色选择触发 cell —— 模拟 t-input 的视觉，与表单其他输入框保持一致
+.role-picker-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--td-component-stroke);
+  border-radius: 6px;
+  background: var(--td-bg-color-container);
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+
+  &:active {
+    border-color: var(--td-brand-color);
+  }
+
+  &__value {
+    flex: 1;
+    font-size: 14px;
+    color: var(--td-text-color-primary);
+
+    &.is-placeholder {
+      color: var(--td-text-color-placeholder);
+    }
+  }
+
+  &__arrow {
+    color: var(--td-text-color-placeholder);
+    font-size: 16px;
+  }
+}
+
+.form-footer {
+  text-align: center;
+  font-size: 14px;
+  color: var(--td-text-color-secondary);
+  font-family: var(--app-font-family);
+  margin-top: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--td-component-stroke);
+
+  .link-button {
+    color: var(--td-brand-color);
+    text-decoration: none;
+    margin-left: 4px;
+    font-weight: 500;
+    transition: all 0.2s;
+
+    &:hover {
+      color: var(--td-brand-color);
+      text-decoration: underline;
+    }
+  }
+}
+
+.login-form-footer {
+  border-bottom: none;
+  padding-bottom: 8px;
+  margin-top: 12px;
+}
+
+.login-features {
+  margin-top: 20px;
+  padding: 0;
+
+  .feature-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 13px;
+    color: var(--td-text-color-secondary);
+    font-family: var(--app-font-family);
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    .feature-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--td-success-color-light);
+      color: var(--td-brand-color-active);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+
+    .feature-text {
+      line-height: 1.4;
+    }
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .knowledge-node:nth-of-type(n + 13) {
+    display: none;
+  }
+
+  .connection-line:nth-of-type(n + 13) {
+    display: none;
+  }
+
+  .showcase-subtitle {
+    font-size: 18px;
+  }
+
+  .header-logo {
+    top: 26px;
+    left: 40px;
+
+    .logo-image {
+      width: 100px;
+    }
+  }
+
+}
+
+@media (max-width: 768px) {
+  .login-layout {
+    flex-direction: column;
+  }
+
+  .knowledge-node:nth-of-type(n + 9) {
+    display: none;
+  }
+
+  .connection-line:nth-of-type(n + 9) {
+    display: none;
+  }
+
+  .showcase-section {
+    flex: 0 0 auto;
+    min-height: 50vh;
+    padding: 40px 24px;
+  }
+
+  .showcase-content {
+    max-width: 100%;
+  }
+
+  .header-logo {
+    top: 22px;
+    left: 30px;
+
+    .logo-image {
+      width: 80px;
+    }
+  }
+
+  .showcase-subtitle {
+    font-size: 16px;
+    margin-bottom: 24px;
+  }
+
+  .feature-tags {
+    margin-bottom: 24px;
+  }
+
+  .form-section {
+    flex: 0 0 auto;
+    padding: 24px;
+  }
+
+  .form-card {
+    padding: 32px 24px;
+  }
+
+  .form-title {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 480px) {
+  .animated-bg {
+    display: none;
+  }
+
+  .showcase-section {
+    padding: 32px 20px;
+  }
+
+  .header-logo {
+    top: 18px;
+    left: 20px;
+
+    .logo-image {
+      width: 70px;
+    }
+  }
+
+  .showcase-subtitle {
+    font-size: 14px;
+  }
+
+  .tag {
+    font-size: 12px;
+    padding: 6px 16px;
+  }
+
+  .form-section {
+    padding: 20px;
+  }
+
+  .form-card {
+    padding: 28px 20px;
+  }
+
+  .form-header {
+    margin-bottom: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .knowledge-node,
+  .connection-line {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .animated-bg {
+    display: none;
+  }
+}
+</style>
+
+

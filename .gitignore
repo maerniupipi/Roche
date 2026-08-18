@@ -1,0 +1,63 @@
+# 忽略所有隐藏文件和目录
+.*
+# 但不忽略特定隐藏文件和目录
+!.env.local.example
+!.env.remote-dev.example
+!.env.server-dev.example
+!.env.production.example
+!.gitignore
+
+# 敏感文件
+*.pem
+*_key
+*_secret
+*.key
+*.crt
+
+# IDE和编辑器文件
+*.swp
+*.swo
+
+# 构建和依赖文件
+node_modules/
+/dist/
+/build/
+*.log
+
+# 临时文件
+tmp/
+temp/
+logs/
+*.pid
+account.md
+**/__debug_bin*
+
+RocheKAP
+migrate
+yanyiwu/
+roche-kap-lite
+/models/
+test/data/mswag.txt
+data/files/
+data/rochekap.db
+data/rochekap.db-wal
+data/rochekap.db-shm
+skills-lock.json
+
+web/
+
+**/__pycache__
+/scripts/scale_dev_jobs.sh
+/server
+frontend/.vite
+frontend/chrome-extension/
+roche-kap-Chrome-Extension
+packages/protoc-3.19.4-linux-x86_64.zip
+
+Claude.md
+
+# 本地测试脚本
+fix-docker.sh
+
+# WeChat Mini Program local/private configuration
+miniprogram/project.private.config.json

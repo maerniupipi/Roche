@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Roche Knowledge Agent Platform">
+  <rect width="64" height="64" rx="12" fill="#0B41CD"/>
+  <path d="M15 15h15c9 0 14 5 14 12 0 5-3 9-8 11l12 11H37L27 39h-3v10h-9V15Zm9 8v9h6c3 0 5-2 5-5s-2-4-5-4h-6Z" fill="#fff"/>
+</svg>

@@ -1,0 +1,18 @@
+ARG GO_BASE_IMAGE=golang:1.26.0-bookworm
+ARG DEBIAN_BASE_IMAGE=debian:bookworm-slim
+
+FROM ${GO_BASE_IMAGE} AS builder
+ARG GOPROXY=https://goproxy.cn,direct
+ENV GOPROXY=${GOPROXY}
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY cmd/mock-saml-idp ./cmd/mock-saml-idp
+RUN CGO_ENABLED=0 go build -trimpath -o /out/mock-saml-idp ./cmd/mock-saml-idp
+
+FROM ${DEBIAN_BASE_IMAGE}
+RUN useradd --system --uid 10001 --create-home mock-saml
+COPY --from=builder /out/mock-saml-idp /usr/local/bin/mock-saml-idp
+USER 10001
+EXPOSE 8091
+ENTRYPOINT ["/usr/local/bin/mock-saml-idp"]

@@ -1,0 +1,15 @@
+ARG GO_BASE_IMAGE=golang:1.26.0-bookworm
+FROM ${GO_BASE_IMAGE}
+
+WORKDIR /workspace
+ARG APT_MIRROR=""
+RUN if [ -n "$APT_MIRROR" ]; then \
+        sed -Ei "s@https?://deb.debian.org@${APT_MIRROR}@g; s@https?://security.debian.org@${APT_MIRROR}@g" \
+            /etc/apt/sources.list.d/debian.sources; \
+    fi && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends git build-essential ca-certificates curl && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN git config --system --add safe.directory /workspace
+CMD ["/bin/bash", "-c", "go build -o /tmp/auth-service ./cmd/auth-service && exec /tmp/auth-service"]

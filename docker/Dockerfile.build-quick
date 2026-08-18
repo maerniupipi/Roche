@@ -1,0 +1,13 @@
+FROM golang:1.26.0-bookworm
+
+RUN apt-get update -qq && apt-get install -y -qq libsqlite3-dev build-essential && rm -rf /var/lib/apt/lists/*
+
+ENV GOPROXY=https://goproxy.cn,direct
+ENV CGO_ENABLED=1
+
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN go build -buildvcs=false -ldflags="-w -s" -o RocheKAP-new ./cmd/server/

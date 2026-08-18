@@ -1,0 +1,42 @@
+# Local-only OIDC provider for source development.
+# Never expose this service or reuse these credentials outside a workstation.
+issuer: http://127.0.0.1:5556/dex
+
+storage:
+  type: memory
+
+web:
+  http: 0.0.0.0:5556
+
+staticClients:
+  - id: rochekap-local
+    name: RD China Knowledge Hub Local
+    secret: rochekap-local-oidc-secret
+    redirectURIs:
+      - http://127.0.0.1:5173/api/v1/auth/oidc/callback
+      - http://localhost:5173/api/v1/auth/oidc/callback
+      - http://127.0.0.1:8080/api/v1/auth/oidc/callback
+      - http://localhost:8080/api/v1/auth/oidc/callback
+      - http://127.0.0.1/api/v1/auth/oidc/callback
+      - http://localhost/api/v1/auth/oidc/callback
+
+enablePasswordDB: true
+
+staticPasswords:
+  - email: admin@rochekap.local
+    # Password: Admin123!
+    hash: "$2a$10$qMgEO9QK1oW0WSwoadpUcO6xC12oNEsH5L0qK7sRFqCdg311CCK.G"
+    username: Mock Admin
+    userID: 00000000-0000-4000-8000-000000000001
+  - email: viewer@rochekap.local
+    # Password: User123!
+    hash: "$2a$10$SfgOPZYjzn6S9PIFbTZ8QOVNfusqyHYz2bN.48LwlA0BmOXLc0XN."
+    username: Mock Viewer
+    userID: 00000000-0000-4000-8000-000000000002
+
+oauth2:
+  responseTypes:
+    - code
+    - id_token
+    - token
+  skipApprovalScreen: true

@@ -1,0 +1,36 @@
+{
+  "version": "v1",
+  "cases": [
+    {
+      "id": "finance-reimbursement-limit",
+      "question": "差旅住宿费的报销上限是多少，超标需要谁审批？",
+      "expected_agent_ids": ["finance"],
+      "expected_evidence_topics": ["amount", "currency", "approval", "effective_date"]
+    },
+    {
+      "id": "compliance-hcp-hospitality",
+      "question": "可以邀请 HCP 参加客户招待活动吗？",
+      "expected_agent_ids": ["compliance"],
+      "expected_evidence_topics": ["HCP", "hospitality", "prohibition", "pre_approval"]
+    },
+    {
+      "id": "cross-domain-hcp-meal",
+      "question": "给 HCP 安排工作餐是否合规，费用又该如何报销？",
+      "expected_agent_ids": ["finance", "compliance"],
+      "expected_evidence_topics": ["HCP", "meal", "compliance_condition", "reimbursement"]
+    },
+    {
+      "id": "cross-domain-sponsorship-payment",
+      "question": "向 HCO 提供赞助需要哪些合规审批，付款需要什么材料？",
+      "expected_agent_ids": ["finance", "compliance"],
+      "expected_evidence_topics": ["HCO", "sponsorship", "approval", "payment_document"]
+    },
+    {
+      "id": "insufficient-evidence",
+      "question": "某项政策未说明生效日期时，能否直接按新标准执行？",
+      "expected_agent_ids": ["finance", "compliance"],
+      "expected_coverage": ["partial", "insufficient"],
+      "must_report_missing": ["effective_date", "applicable_scope"]
+    }
+  ]
+}

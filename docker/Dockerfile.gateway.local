@@ -1,0 +1,15 @@
+ARG NGINX_BASE_IMAGE=nginx:1.28.0-alpine3.21
+FROM ${NGINX_BASE_IMAGE}
+
+COPY docker/gateway/default.conf.local.template /etc/nginx/templates/default.conf.template
+COPY docker/gateway/gateway-proxy.conf /etc/nginx/gateway-proxy.conf
+
+ENV NGINX_ENVSUBST_FILTER=^GATEWAY_ \
+    GATEWAY_FRONTEND_UPSTREAM=app:8080 \
+    GATEWAY_APP_UPSTREAM=app:8080 \
+    GATEWAY_MAX_BODY_SIZE=100m
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD wget -qO- http://127.0.0.1:8080/health >/dev/null || exit 1

@@ -1,0 +1,277 @@
+export type ReferenceItemKind = 'document' | 'tool'
+
+export type KnowledgeReferenceLike = {
+  id?: string
+  chunk_ids?: string[]
+  knowledge_id?: string
+  knowledge_title?: string
+  knowledge_filename?: string
+  knowledge_base_id?: string
+  chunk_index?: number
+  chunk_type?: string
+  start_at?: number
+  end_at?: number
+  image_info?: string
+  knowledge_source?: string
+  knowledge_channel?: string
+  knowledge_description?: string
+  content?: string
+  metadata?: Record<string, string>
+}
+
+export type ReferenceListItem = {
+  key: string
+  kind: ReferenceItemKind
+  index: number
+  title: string
+  fileName?: string
+  url?: string
+  domain?: string
+  faviconUrl?: string
+  snippet?: string
+  chunkId?: string
+  chunkIds?: string[]
+  knowledgeId?: string
+  knowledgeBaseId?: string
+  content?: string
+}
+
+export type ReferenceDrawerSection = {
+  id: 'documents' | 'tools'
+  items: ReferenceListItem[]
+}
+
+export function normalizeReferenceUrl(url: string): string {
+  const raw = String(url || '').trim()
+  if (!raw) return ''
+  try {
+    const parsed = new URL(raw)
+    parsed.hash = ''
+    let pathname = parsed.pathname
+    if (pathname.length > 1 && pathname.endsWith('/')) {
+      pathname = pathname.slice(0, -1)
+    }
+    parsed.pathname = pathname
+    return parsed.toString()
+  } catch {
+    return raw.replace(/\/$/, '')
+  }
+}
+
+export function getDomainFromUrl(url: string): string {
+  if (!url) return ''
+  try {
+    return new URL(url).hostname.replace(/^www\./i, '')
+  } catch {
+    return url
+  }
+}
+
+export function getFaviconUrl(urlOrDomain: string): string {
+  const domain = urlOrDomain.includes('://')
+    ? getDomainFromUrl(urlOrDomain)
+    : urlOrDomain.replace(/^www\./i, '')
+  if (!domain) return ''
+  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`
+}
+
+function truncateText(text: string, maxLen: number): string {
+  const normalized = String(text || '').replace(/\s+/g, ' ').trim()
+  if (normalized.length <= maxLen) return normalized
+  return `${normalized.slice(0, maxLen)}…`
+}
+
+function isToolReference(item: KnowledgeReferenceLike): boolean {
+  return item.chunk_type === 'tool_result'
+}
+
+function buildDocumentItem(item: KnowledgeReferenceLike, index: number): ReferenceListItem {
+  const chunkId = item.id || `${item.knowledge_id || 'doc'}-${item.chunk_index ?? index}`
+  const title = item.knowledge_title || item.knowledge_filename || item.knowledge_id || 'Document'
+  const documentKey =
+    item.knowledge_id ||
+    [item.knowledge_base_id, item.knowledge_title || item.knowledge_filename].filter(Boolean).join(':') ||
+    chunkId
+  return {
+    key: `doc:${documentKey}`,
+    kind: 'document',
+    index,
+    title,
+    fileName: item.knowledge_filename,
+    chunkId,
+    chunkIds: item.chunk_ids,
+    knowledgeId: item.knowledge_id,
+    knowledgeBaseId: item.knowledge_base_id,
+    snippet: truncateText(item.content || '', 220) || undefined,
+    content: item.content,
+  }
+}
+
+function buildToolItem(item: KnowledgeReferenceLike, index: number): ReferenceListItem {
+  const id = item.id || `tool-${index}`
+  return {
+    key: `tool:${id}`,
+    kind: 'tool',
+    index,
+    title: item.knowledge_title || item.metadata?.title || 'Tool result',
+    domain: item.metadata?.source || item.metadata?.tool || undefined,
+    snippet: truncateText(item.content || '', 220) || undefined,
+    chunkId: id,
+    content: item.content,
+  }
+}
+
+function getDocumentGroupKey(item: KnowledgeReferenceLike, index: number): string {
+  if (item.knowledge_id) return item.knowledge_id
+  const title = item.knowledge_title || item.knowledge_filename
+  if (title) return [item.knowledge_base_id, title].filter(Boolean).join(':')
+  return (
+    item.id ||
+    `doc-${index}`
+  )
+}
+
+function mergeDocumentReferences(refs: KnowledgeReferenceLike[]): KnowledgeReferenceLike[] {
+  const groups = new Map<string, KnowledgeReferenceLike & { content_parts?: string[] }>()
+
+  refs.forEach((item, index) => {
+    const key = getDocumentGroupKey(item, index)
+    const content = String(item.content || '').trim()
+    const chunkIds = Array.from(new Set([...(item.chunk_ids || []), ...(item.id ? [item.id] : [])]))
+    const existing = groups.get(key)
+
+    if (!existing) {
+      groups.set(key, {
+        ...item,
+        id: item.id || key,
+        content_parts: content ? [content] : [],
+        chunk_ids: chunkIds,
+      })
+      return
+    }
+
+    if (!existing.knowledge_id && item.knowledge_id) existing.knowledge_id = item.knowledge_id
+    if (!existing.knowledge_title && item.knowledge_title) existing.knowledge_title = item.knowledge_title
+    if (!existing.knowledge_filename && item.knowledge_filename) existing.knowledge_filename = item.knowledge_filename
+    if (!existing.knowledge_base_id && item.knowledge_base_id) existing.knowledge_base_id = item.knowledge_base_id
+    for (const chunkId of chunkIds) {
+      if (!existing.chunk_ids?.includes(chunkId)) {
+        existing.chunk_ids = [...(existing.chunk_ids || []), chunkId]
+      }
+    }
+    if (content && !existing.content_parts?.includes(content)) {
+      existing.content_parts = [...(existing.content_parts || []), content]
+    }
+  })
+
+  return Array.from(groups.values()).map((item) => {
+    const { content_parts: contentParts, ...rest } = item
+    return {
+      ...rest,
+      content: contentParts?.slice(0, 3).join('\n\n') || rest.content,
+    }
+  })
+}
+
+export function buildReferenceSections(
+  refs: KnowledgeReferenceLike[] | null | undefined,
+): ReferenceDrawerSection[] {
+  const list = Array.isArray(refs) ? refs.filter(Boolean) : []
+  if (!list.length) return []
+
+  const documentReferences: KnowledgeReferenceLike[] = []
+  const toolReferences: KnowledgeReferenceLike[] = []
+  const docItems: ReferenceListItem[] = []
+  const toolItems: ReferenceListItem[] = []
+  let docIndex = 0
+  let toolIndex = 0
+
+  for (const item of list) {
+    if (isToolReference(item)) {
+      toolReferences.push(item)
+      continue
+    }
+    documentReferences.push(item)
+  }
+
+  for (const item of mergeDocumentReferences(documentReferences)) {
+    docItems.push(buildDocumentItem(item, ++docIndex))
+  }
+
+  for (const item of toolReferences) {
+    toolItems.push(buildToolItem(item, ++toolIndex))
+  }
+
+  // Tools render before documents so chat references highlight tool results first.
+  const sections: ReferenceDrawerSection[] = []
+  if (toolItems.length) sections.push({ id: 'tools', items: toolItems })
+  if (docItems.length) sections.push({ id: 'documents', items: docItems })
+  return sections
+}
+
+export function buildReferenceList(
+  refs: KnowledgeReferenceLike[] | null | undefined,
+): ReferenceListItem[] {
+  const list = Array.isArray(refs) ? refs.filter(Boolean) : []
+  const grouped = buildReferenceSections(list).flatMap((section) => section.items)
+  if (grouped.length <= 1) return grouped
+
+  // Citation positions follow backend reference order. The drawer may group
+  // documents and tool results into sections, but lookup helpers must preserve
+  // the original order so DOC-N/FAQ-N resolve deterministically.
+  const byKey = new Map(grouped.map((item) => [item.key, item]))
+  const ordered: ReferenceListItem[] = []
+  const seen = new Set<string>()
+  list.forEach((item, index) => {
+    const key = isToolReference(item)
+      ? `tool:${item.id || `tool-${index + 1}`}`
+      : `doc:${getDocumentGroupKey(item, index)}`
+    const resolved = byKey.get(key)
+    if (resolved && !seen.has(key)) {
+      ordered.push(resolved)
+      seen.add(key)
+    }
+  })
+  for (const item of grouped) {
+    if (!seen.has(item.key)) ordered.push(item)
+  }
+  return ordered
+}
+
+export type ReferenceHighlightTarget = {
+  url?: string
+  chunkId?: string
+  key?: string
+}
+
+export function resolveReferenceHighlightKey(
+  refs: KnowledgeReferenceLike[] | null | undefined,
+  target: ReferenceHighlightTarget | null | undefined,
+): string | null {
+  if (!target) return null
+  if (target.key) return target.key
+
+  const items = buildReferenceList(refs)
+  if (!items.length) return null
+
+  if (target.url) {
+    const normalized = normalizeReferenceUrl(target.url)
+    const hit = items.find(
+      (item) => item.kind === 'document' && item.knowledgeId && normalizeReferenceUrl(item.url || '') === normalized,
+    )
+    if (hit) return hit.key
+  }
+
+  if (target.chunkId) {
+    const raw = String(target.chunkId).trim()
+    const hit = items.find(
+      (item) =>
+        item.chunkId === raw ||
+        item.chunkIds?.includes(raw) ||
+        item.key === `doc:${raw}`,
+    )
+    if (hit) return hit.key
+  }
+
+  return null
+}

@@ -1,0 +1,106 @@
+# RocheKAP main-branch deployment.
+#
+# DEPLOY_MODE defaults to server-dev while customer PingIdentity and Workday
+# endpoints are unavailable. Set DEPLOY_MODE=production in GitLab CI/CD
+# variables when the deployment host has a complete .env.server production
+# configuration and the real enterprise integrations are ready.
+stages:
+  - deploy
+
+variables:
+  DEPLOY_MODE: "server-dev"
+
+deploy:
+  stage: deploy
+  tags:
+    - rochekap-prod
+  script:
+    - mkdir -p ~/.ssh
+    - cp "${DEPLOY_SSH_KEY}" ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
+    - |
+      ssh "${DEPLOY_USER}@${DEPLOY_HOST}" "bash -s" << DEPLOY_EOF
+        set -euo pipefail
+        cd "${DEPLOY_PATH}"
+
+        echo "=== Checking out pipeline commit ${CI_COMMIT_SHORT_SHA} ==="
+        git remote set-url origin "https://gitlab-ci-token:${CI_JOB_TOKEN}@newgitlab.digitalchina.com/tangjjg/rochekap.git"
+        git fetch origin "${CI_COMMIT_SHA}"
+        git checkout -f -B main "${CI_COMMIT_SHA}"
+        git reset --hard "${CI_COMMIT_SHA}"
+        git remote set-url origin "https://newgitlab.digitalchina.com/tangjjg/rochekap.git"
+
+        if [ "${DEPLOY_MODE}" = "server-dev" ]; then
+          echo "=== Deploying server development stack with Mock SAML and Mock Workday ==="
+          if [ -f .env.server-dev ]; then
+            bash scripts/prepare_server_dev_env.sh \
+              .env.server-dev "${SERVER_DEV_PUBLIC_URL:-http://${DEPLOY_HOST}}" .env.server-dev
+          elif [ -f .env.server ]; then
+            bash scripts/prepare_server_dev_env.sh \
+              .env.server-dev "${SERVER_DEV_PUBLIC_URL:-http://${DEPLOY_HOST}}" .env.server
+          else
+            bash scripts/prepare_server_dev_env.sh \
+              .env.server-dev "${SERVER_DEV_PUBLIC_URL:-http://${DEPLOY_HOST}}" .env.server-dev.example
+          fi
+
+          SERVER_DEV_ENV_FILE=.env.server-dev \
+            bash scripts/server_dev.sh ci-update
+        elif [ "${DEPLOY_MODE}" = "production" ]; then
+          echo "=== Building immutable production images ==="
+          if [ ! -f .env.server ]; then
+            echo "Missing .env.server on the deployment host." >&2
+            exit 1
+          fi
+
+          chmod +x scripts/docker-build-app.sh
+          bash scripts/docker-build-app.sh
+          docker tag rochekap/app:latest "rochekap/app:${CI_COMMIT_SHORT_SHA}"
+
+          docker build \
+            --platform linux/amd64 \
+            -f docker/Dockerfile.docreader \
+            -t "rochekap/docreader:${CI_COMMIT_SHORT_SHA}" \
+            .
+
+          docker build \
+            --platform linux/amd64 \
+            --build-arg NPM_REGISTRY="https://registry.npmmirror.com" \
+            --build-arg COMMIT_ID_ARG="${CI_COMMIT_SHORT_SHA}" \
+            -f frontend/Dockerfile \
+            -t "rochekap/frontend:${CI_COMMIT_SHORT_SHA}" \
+            .
+
+          docker build \
+            --platform linux/amd64 \
+            --build-arg APT_MIRROR="https://mirrors.tuna.tsinghua.edu.cn" \
+            --build-arg GOPROXY_ARG="https://goproxy.cn,direct" \
+            -f docker/Dockerfile.auth-service \
+            -t "rochekap/auth-service:${CI_COMMIT_SHORT_SHA}" \
+            .
+
+          docker build \
+            --platform linux/amd64 \
+            -f docker/Dockerfile.gateway \
+            -t "rochekap/api-gateway:${CI_COMMIT_SHORT_SHA}" \
+            .
+
+          PRODUCTION_APP_IMAGE="rochekap/app:${CI_COMMIT_SHORT_SHA}" \
+          PRODUCTION_DOCREADER_IMAGE="rochekap/docreader:${CI_COMMIT_SHORT_SHA}" \
+          PRODUCTION_FRONTEND_IMAGE="rochekap/frontend:${CI_COMMIT_SHORT_SHA}" \
+          PRODUCTION_AUTH_SERVICE_IMAGE="rochekap/auth-service:${CI_COMMIT_SHORT_SHA}" \
+          PRODUCTION_API_GATEWAY_IMAGE="rochekap/api-gateway:${CI_COMMIT_SHORT_SHA}" \
+          PRODUCTION_ENV_FILE=.env.server \
+            bash scripts/production_server.sh ci-update
+        else
+          echo "Unsupported DEPLOY_MODE: ${DEPLOY_MODE}" >&2
+          exit 1
+        fi
+
+        docker image prune -f || true
+        echo "=== Deployment complete ==="
+      DEPLOY_EOF
+  environment:
+    name: $DEPLOY_MODE
+  only:
+    - main

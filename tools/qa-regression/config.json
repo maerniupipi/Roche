@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "base_url": "http://127.0.0.1:8080",
+  "questions_file": "questions.json",
+  "output_directory": "tmp/qa-regression",
+  "channel": "web",
+  "heartbeat_seconds": 30,
+  "auth": {
+    "access_token_env": "UNIFIED_QA_TEST_ACCESS_TOKEN",
+    "user_id_env": "UNIFIED_QA_TEST_USER_ID",
+    "user_email": "admin@rochekap.local",
+    "jwt_secret_env": "UNIFIED_QA_TEST_JWT_SECRET",
+    "token_ttl_hours": 6
+  },
+  "database": {
+    "container": "roche-kap-postgres-dev",
+    "host_env": "UNIFIED_QA_TEST_DB_HOST",
+    "port": 5432,
+    "user": "postgres",
+    "name": "RocheKAP",
+    "password_env": "UNIFIED_QA_TEST_DB_PASSWORD"
+  },
+  "unified": {
+    "model_id": "3a5cc762-057f-4fa9-b915-d907ee7d978c",
+    "model_id_env": "UNIFIED_QA_TEST_MODEL_ID",
+    "enable_memory": false,
+    "disable_title": true
+  },
+  "smart_reasoning": {
+    "agent_id": "builtin-smart-reasoning",
+    "temporarily_bind_model": false,
+    "model_id": "3a5cc762-057f-4fa9-b915-d907ee7d978c",
+    "model_id_env": "UNIFIED_QA_TEST_SMART_MODEL_ID",
+    "use_unified_model_if_empty": true,
+    "enable_memory": false,
+    "disable_title": true,
+    "web_search_enabled": false
+  },
+  "report": {
+    "include_full_answers": true
+  },
+  "assertions": {
+    "fail_on_failure": false,
+    "default_max_latency_ms": 360000
+  }
+}

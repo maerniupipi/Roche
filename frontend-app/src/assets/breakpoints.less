@@ -1,0 +1,83 @@
+// filepath: src/assets/breakpoints.less
+//
+// 移动端 3 档断点 less mixin —— 与 src/composables/useBreakpoint.ts 对齐：
+//   sm : < 768        （手机）
+//   md : 768 - 1279   （小平板 / iPad mini / iPad portrait）
+//   xl : ≥ 1280       （iPad 横屏 / 桌面浏览器 / 平板分屏）
+//
+// 在 less 中使用：
+//   .my-component {
+//     padding: 12px;
+//     .sm({ padding: 8px; flex-direction: column; });
+//   }
+//  对应：@media (max-width: 767.98px) { ... }
+//
+// 与传统 @media 写法的对应关系：
+//   .sm({...})  ⇔ @media (max-width: 767.98px) {...}
+//   .md({...})  ⇔ @media (min-width: 768px) and (max-width: 1279.98px) {...}
+//   .xl({...})  ⇔ @media (min-width: 1280px) {...}   // v2 决策：xl 档已简化为 1280
+//   v1 历史：xl 档断点下移（v1 xl 与 v2 md 上界对齐） → v2 简化为 sm/md/xl 三档（sm<768 / md 768-1280 / xl ≥1280）
+
+@bp-md: 768px;
+@bp-xl: 1280px;
+
+// sm: < 768 (phone)
+.sm(@rules) {
+  @media (max-width: (@bp-md - 0.02px)) {
+    @rules();
+  }
+}
+
+// md: 768 - 1023 (small tablet)
+.md(@rules) {
+  @media (min-width: @bp-md) and (max-width: (@bp-xl - 0.02px)) {
+    @rules();
+  }
+}
+
+// xl: ≥ 1280 (iPad landscape / desktop browser / split view)
+.xl(@rules) {
+  @media (min-width: @bp-xl) {
+    @rules();
+  }
+}
+
+// 反向辅助
+.lt-md(@rules) {
+  @media (max-width: (@bp-md - 0.02px)) {
+    @rules();
+  }
+}
+
+.lt-xl(@rules) {
+  @media (max-width: (@bp-xl - 0.02px)) {
+    @rules();
+  }
+}
+
+.gte-md(@rules) {
+  @media (min-width: @bp-md) {
+    @rules();
+  }
+}
+
+.gte-xl(@rules) {
+  @media (min-width: @bp-xl) {
+    @rules();
+  }
+}
+
+// 触摸设备（无 hover 能力）
+.hover-none(@rules) {
+  @media (hover: none) {
+    @rules();
+  }
+}
+
+// 移动端布局工具类（Stage B）
+// Stage A 后已无 deviceType 概念，移动端是唯一形态。
+// 此工具类保留供未来「强制移动端布局」场景使用（例如平板横屏时
+// 强制渲染 MobileAppShell 而非桌面布局），目前无代码引用。
+.is-mobile-layout {
+  display: block;
+}

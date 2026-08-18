@@ -1,0 +1,111 @@
+upstream gateway_frontend {
+    server ${GATEWAY_FRONTEND_UPSTREAM};
+    keepalive 32;
+}
+
+upstream gateway_auth_service {
+    server ${GATEWAY_AUTH_UPSTREAM};
+    keepalive 32;
+}
+
+upstream gateway_application {
+    server ${GATEWAY_APP_UPSTREAM};
+    keepalive 64;
+}
+
+# Preserve HTTPS when TLS is terminated by a trusted ingress/load balancer.
+# Ignore every forwarded value except an exact https marker so arbitrary
+# client input cannot be copied through as a protocol value.
+map $http_x_forwarded_proto $gateway_forwarded_proto {
+    default $scheme;
+    ~*^https$ https;
+}
+
+server {
+    listen 8080;
+    server_name _;
+
+    client_max_body_size ${GATEWAY_MAX_BODY_SIZE};
+    server_tokens off;
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    location = /health {
+        access_log off;
+        default_type application/json;
+        return 200 '{"status":"ok","service":"api-gateway"}';
+    }
+
+    # This endpoint is unreachable from clients. nginx uses it as an
+    # auth_request subrequest and forwards only the bearer token plus the
+    # gateway-to-auth shared secret.
+    location = /_gateway/auth/validate {
+        internal;
+        proxy_pass http://gateway_auth_service/internal/v1/auth/validate;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+        proxy_set_header Authorization $http_authorization;
+        proxy_set_header X-Auth-Service-Secret "${GATEWAY_AUTH_SHARED_SECRET}";
+        proxy_set_header X-Request-ID $request_id;
+    }
+
+    # Authentication lifecycle is owned exclusively by Auth Service.
+    location ^~ /api/v1/auth/ {
+        proxy_pass http://gateway_auth_service;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $gateway_forwarded_proto;
+        proxy_set_header X-Request-ID $request_id;
+        proxy_set_header X-Authenticated-User-ID "";
+        proxy_set_header X-Authenticated-Email "";
+        proxy_set_header X-Authenticated-System-Admin "";
+        proxy_set_header X-Authenticated-Knowledge-Officer "";
+    }
+
+    # Signature-protected file URLs and the third-party MCP callback validate
+    # their own credentials in the application backend.
+    location = /api/v1/files/presigned {
+        proxy_pass http://gateway_application;
+        include /etc/nginx/gateway-proxy.conf;
+    }
+
+    location = /api/v1/mcp-oauth/callback {
+        proxy_pass http://gateway_application;
+        include /etc/nginx/gateway-proxy.conf;
+    }
+
+    location ^~ /api/ {
+        auth_request /_gateway/auth/validate;
+        auth_request_set $auth_user_id $upstream_http_x_authenticated_user_id;
+        auth_request_set $auth_email $upstream_http_x_authenticated_email;
+        auth_request_set $auth_system_admin $upstream_http_x_authenticated_system_admin;
+        auth_request_set $auth_knowledge_officer $upstream_http_x_authenticated_knowledge_officer;
+
+        proxy_pass http://gateway_application;
+        include /etc/nginx/gateway-proxy.conf;
+        proxy_set_header X-Authenticated-User-ID $auth_user_id;
+        proxy_set_header X-Authenticated-Email $auth_email;
+        proxy_set_header X-Authenticated-System-Admin $auth_system_admin;
+        proxy_set_header X-Authenticated-Knowledge-Officer $auth_knowledge_officer;
+    }
+
+    location / {
+        proxy_pass http://gateway_frontend;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $gateway_forwarded_proto;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+    }
+}
+
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+}

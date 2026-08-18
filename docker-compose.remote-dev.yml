@@ -1,0 +1,37 @@
+# Runs only the local Application Backend. PostgreSQL, Redis, Milvus,
+# DocReader, Neo4j, MinIO and Langfuse are reached directly on DEV_REMOTE_HOST.
+services:
+  app:
+    image: roche/knowledge-agent-platform-app:remote-dev
+    pull_policy: build
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.app.source
+      args:
+        - GO_BASE_IMAGE=${GO_BASE_IMAGE:-golang:1.26.0-bookworm}
+        - APT_MIRROR=${APT_MIRROR:-https://mirrors.tuna.tsinghua.edu.cn}
+    container_name: roche-kap-app-remote-dev
+    working_dir: /workspace
+    ports:
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-8080}:8080"
+    env_file:
+      - ${REMOTE_DEV_ENV_FILE:-.env.remote-dev}
+    volumes:
+      - ./:/workspace
+      - remote-dev-go-mod-cache:/go/pkg/mod
+      - remote-dev-go-build-cache:/root/.cache/go-build
+      - remote-dev-duckdb-cache:/root/.duckdb
+      - remote-dev-data-files:/data/files
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 5m
+    restart: unless-stopped
+
+volumes:
+  remote-dev-go-mod-cache:
+  remote-dev-go-build-cache:
+  remote-dev-duckdb-cache:
+  remote-dev-data-files:

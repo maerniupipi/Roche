@@ -1,0 +1,113 @@
+[
+  {
+    "id": "Q01",
+    "enabled": true,
+    "tags": ["finance", "travel_expense"],
+    "question": "出差期间的餐费是否可以报销？需要哪些凭证和审批？",
+    "expected": {
+      "route": {"selected_agent_ids": ["finance"]},
+      "unified": {"allowed_status": ["complete", "partial"], "min_references": 1, "is_fallback": false}
+    }
+  },
+  {
+    "id": "Q02",
+    "enabled": true,
+    "tags": ["compliance", "hcp"],
+    "question": "向医疗卫生专业人士提供礼品或宴请时，有哪些合规限制？",
+    "expected": {
+      "route": {"selected_agent_ids": ["compliance"]},
+      "unified": {"allowed_status": ["complete", "partial"], "min_references": 1, "is_fallback": false}
+    }
+  },
+  {
+    "id": "Q03",
+    "enabled": true,
+    "tags": ["finance", "compliance", "hcp", "travel_expense"],
+    "question": "邀请 HCP 参加外地会议并报销交通住宿，需要哪些财务审批和合规条件？",
+    "expected": {
+      "route": {"selected_agent_ids": ["finance", "compliance"]},
+      "unified": {"allowed_status": ["complete", "partial"], "min_references": 1, "is_fallback": false}
+    }
+  },
+  {
+    "id": "Q04",
+    "enabled": true,
+    "tags": ["finance", "doa", "procurement"],
+    "question": "部门负责人可以审批多大金额的采购合同？",
+    "expected": {
+      "route": {"selected_agent_ids": ["finance"]},
+      "unified": {"allowed_status": ["complete", "partial"], "min_references": 1, "is_fallback": false}
+    }
+  },
+  {
+    "id": "Q05",
+    "enabled": true,
+    "tags": ["compliance", "hcp", "monitoring"],
+    "question": "HCP 活动结束后需要做哪些合规抽查和留档？",
+    "expected": {
+      "route": {"selected_agent_ids": ["compliance"]},
+      "unified": {"allowed_status": ["complete", "partial"], "min_references": 1, "is_fallback": false}
+    }
+  },
+  {
+    "id": "Q06",
+    "enabled": true,
+    "tags": ["finance", "travel_expense", "reimbursement"],
+    "question": "员工垫付客户会议费用后应该如何申请报销？",
+    "expected": {
+      "route": {"selected_agent_ids": ["finance"]},
+      "unified": {"allowed_status": ["complete", "partial"], "min_references": 1, "is_fallback": false}
+    }
+  },
+  {
+    "id": "Q07",
+    "enabled": true,
+    "tags": ["finance", "compliance", "hcp", "sponsorship"],
+    "question": "赞助医疗卫生组织举办会议时，付款和合规审批分别有什么要求？",
+    "expected": {
+      "route": {"selected_agent_ids": ["finance", "compliance"]},
+      "unified": {"allowed_status": ["complete", "partial"], "min_references": 1, "is_fallback": false}
+    }
+  },
+  {
+    "id": "Q08",
+    "enabled": true,
+    "tags": ["finance", "clarification"],
+    "question": "这笔费用能不能批？",
+    "expected": {
+      "route": {"selected_agent_ids": ["finance"]},
+      "unified": {
+        "allowed_status": ["partial"],
+        "min_references": 0,
+        "is_fallback": false,
+        "must_contain": ["信息不足", "金额和币种"],
+        "must_not_contain": ["检索到 3 个"]
+      }
+    }
+  },
+  {
+    "id": "Q09",
+    "enabled": true,
+    "tags": ["out_of_service"],
+    "question": "明天上海天气怎么样？",
+    "expected": {
+      "route": {"selected_agent_ids": [], "outcome": "out_of_service"},
+      "unified": {
+        "allowed_status": ["insufficient"],
+        "min_references": 0,
+        "is_fallback": true,
+        "must_contain": ["不在服务范围"]
+      }
+    }
+  },
+  {
+    "id": "Q10",
+    "enabled": true,
+    "tags": ["finance", "compliance", "hcp", "english"],
+    "question": "What approvals are required for reimbursing an HCP's travel expenses?",
+    "expected": {
+      "route": {"selected_agent_ids": ["finance", "compliance"]},
+      "unified": {"allowed_status": ["complete", "partial"], "min_references": 1, "is_fallback": false}
+    }
+  }
+]

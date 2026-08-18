@@ -1,0 +1,23 @@
+ARG GO_BASE_IMAGE=golang:1.26.0-bookworm
+FROM ${GO_BASE_IMAGE}
+
+WORKDIR /workspace
+
+ARG APT_MIRROR=""
+ARG APK_MIRROR_ARG=""
+
+RUN MIRROR="${APT_MIRROR:-$APK_MIRROR_ARG}"; \
+    if [ -n "$MIRROR" ]; then \
+        sed -Ei "s@https?://deb.debian.org@${MIRROR}@g; s@https?://security.debian.org@${MIRROR}@g" \
+            /etc/apt/sources.list.d/debian.sources; \
+    fi && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends git build-essential libsqlite3-dev ca-certificates curl && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN git config --system --add safe.directory /workspace
+
+# Source is bind-mounted at /workspace by docker-compose.server-dev.yml.
+# Go module and build caches are named volumes, so rebuilding after git pull
+# does not require downloading all dependencies again.
+CMD ["/bin/bash", "-c", "go run cmd/download/duckdb/duckdb.go && go build -o /tmp/RocheKAP ./cmd/server && exec /tmp/RocheKAP"]

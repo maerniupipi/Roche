@@ -1,0 +1,55 @@
+# ============================================================
+# DocReader Base 镜像（本地一次性构建，推送到内部 Registry）
+# 包含：Python + 所有构建和运行时依赖 + Playwright + LibreOffice
+# ============================================================
+FROM python:3.10.18-bookworm
+
+WORKDIR /app
+
+# 安装构建依赖
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        gcc \
+        python3-dev \
+        libjpeg-dev \
+        zlib1g-dev \
+        libffi-dev \
+        libgl1 \
+        libglib2.0-0 \
+        wget \
+        antiword \
+        curl \
+        unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装运行时依赖
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libjpeg62-turbo \
+        wget \
+        gnupg \
+        openjdk-17-jre-headless \
+        libgl1 \
+        libglib2.0-0 \
+        antiword \
+        tar \
+        dpkg \
+        libxinerama1 \
+        libfontconfig1 \
+        libdbus-glib-1-2 \
+        libcairo2 \
+        libcups2 \
+        libglu1-mesa \
+        libsm6 \
+        libreoffice \
+        curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装 uv 和 Playwright（阿里云镜像优先，失败回退官方源）
+RUN (pip install --index-url https://mirrors.aliyun.com/pypi/simple/ uv==0.11.22 playwright --break-system-packages || \
+     pip install uv==0.11.22 playwright --break-system-packages)
+
+# 安装 Playwright 浏览器
+RUN python -m playwright install webkit && \
+    python -m playwright install-deps webkit
+
+# 创建共享临时目录
+RUN mkdir -p /tmp/docreader

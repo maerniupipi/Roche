@@ -1,0 +1,10 @@
+*
+!frontend/
+!frontend/**
+!frontend-default/
+!frontend-default/**
+
+frontend/node_modules/
+frontend/dist/
+frontend-default/node_modules/
+frontend-default/dist/

@@ -1,0 +1,1099 @@
+package repository
+
+import (
+	"context"
+	"errors"
+	"strings"
+	"time"
+
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+	"roche.local/knowledge-agent-platform/internal/types"
+	"roche.local/knowledge-agent-platform/internal/types/interfaces"
+)
+
+var (
+	ErrKnowledgeNotFound       = errors.New("knowledge not found")
+	ErrKnowledgeFolderNotFound = errors.New("knowledge folder not found")
+	// Returned when a document is added while a folder subtree is being
+	// deleted. The caller can retry after the concurrent write completes.
+	ErrKnowledgeFolderNotEmpty = errors.New("knowledge folder changed during deletion")
+)
+
+// escapeLikeKeyword escapes SQL LIKE wildcards (%, _) in a keyword
+// so they are treated as literal characters.
+func escapeLikeKeyword(keyword string) string {
+	keyword = strings.ReplaceAll(keyword, `\`, `\\`)
+	keyword = strings.ReplaceAll(keyword, "%", `\%`)
+	keyword = strings.ReplaceAll(keyword, "_", `\_`)
+	return keyword
+}
+
+// omitFieldsOnUpdate defines fields to omit when updating knowledge.
+//
+// PendingSubtasksCount is deliberately omitted from every full-row Save:
+// it is an orchestration counter owned exclusively by the atomic helpers
+// SetFinalizing (seed), FinalizeSubtask (decrement+promote) and the
+// explicit UpdateKnowledgeColumns resets (cancel/reparse). A generic
+// UpdateKnowledge call persists the WHOLE in-memory struct, so any
+// concurrent enrichment subtask that loaded the row, did slow work
+// (e.g. an LLM call), then saved an unrelated field would otherwise
+// write back the STALE counter it read at load time — clobbering the
+// decrements other subtasks performed in the meantime. That made the
+// counter jump back up and never reach zero (the "stuck
+// pending_subtasks_count / never promoted to completed" bug). Omitting
+// the column here means Save can never touch it.
+var omitFieldsOnUpdate = []string{"DeletedAt", "PendingSubtasksCount"}
+
+// knowledgeRepository implements knowledge base and knowledge repository interface
+type knowledgeRepository struct {
+	db *gorm.DB
+}
+
+// NewKnowledgeRepository creates a new knowledge repository
+func NewKnowledgeRepository(db *gorm.DB) interfaces.KnowledgeRepository {
+	return &knowledgeRepository{db: db}
+}
+
+// CreateKnowledge creates knowledge
+func (r *knowledgeRepository) CreateKnowledge(ctx context.Context, knowledge *types.Knowledge) error {
+	err := r.db.WithContext(ctx).Create(knowledge).Error
+	return err
+}
+
+// GetKnowledgeByID gets knowledge
+func (r *knowledgeRepository) GetKnowledgeByID(
+	ctx context.Context,
+	knowledgeDomainID uint64,
+	id string,
+) (*types.Knowledge, error) {
+	var knowledge types.Knowledge
+	if err := r.db.WithContext(ctx).Where("knowledge_domain_id = ? AND id = ?", knowledgeDomainID, id).First(&knowledge).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrKnowledgeNotFound
+		}
+		return nil, err
+	}
+	return &knowledge, nil
+}
+
+// GetKnowledgeByIDOnly returns knowledge by ID without knowledgeDomain filter (for permission resolution).
+func (r *knowledgeRepository) GetKnowledgeByIDOnly(ctx context.Context, id string) (*types.Knowledge, error) {
+	var knowledge types.Knowledge
+	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&knowledge).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrKnowledgeNotFound
+		}
+		return nil, err
+	}
+	return &knowledge, nil
+}
+
+// ListKnowledgeByKnowledgeBaseID lists all knowledge in a knowledge base
+func (r *knowledgeRepository) ListKnowledgeByKnowledgeBaseID(
+	ctx context.Context, knowledgeDomainID uint64, kbID string,
+) ([]*types.Knowledge, error) {
+	var knowledges []*types.Knowledge
+	if err := r.db.WithContext(ctx).Where("knowledge_domain_id = ? AND knowledge_base_id = ?", knowledgeDomainID, kbID).
+		Order("created_at DESC").Find(&knowledges).Error; err != nil {
+		return nil, err
+	}
+	return knowledges, nil
+}
+
+// ResolveKnowledgeFolderPath creates missing path segments and returns the
+// deepest folder. relativePath must already be normalized by the service.
+func (r *knowledgeRepository) ResolveKnowledgeFolderPath(
+	ctx context.Context,
+	knowledgeDomainID uint64,
+	kbID string,
+	relativePath string,
+) (*types.KnowledgeFolder, error) {
+	if relativePath == "" {
+		return nil, nil
+	}
+
+	var parentID *string
+	var currentPath string
+	var current *types.KnowledgeFolder
+	for _, name := range strings.Split(relativePath, "/") {
+		if currentPath == "" {
+			currentPath = name
+		} else {
+			currentPath += "/" + name
+		}
+
+		candidate := &types.KnowledgeFolder{
+			KnowledgeDomainID: knowledgeDomainID,
+			KnowledgeBaseID:   kbID,
+			ParentID:          parentID,
+			Name:              name,
+			RelativePath:      currentPath,
+			CreatedAt:         time.Now(),
+			UpdatedAt:         time.Now(),
+		}
+		if err := r.db.WithContext(ctx).Clauses(clause.OnConflict{
+			Columns: []clause.Column{
+				{Name: "knowledge_base_id"},
+				{Name: "relative_path"},
+			},
+			DoNothing: true,
+		}).Create(candidate).Error; err != nil {
+			return nil, err
+		}
+
+		current = &types.KnowledgeFolder{}
+		if err := r.db.WithContext(ctx).
+			Where(
+				"knowledge_domain_id = ? AND knowledge_base_id = ? AND relative_path = ?",
+				knowledgeDomainID,
+				kbID,
+				currentPath,
+			).
+			First(current).Error; err != nil {
+			return nil, err
+		}
+		id := current.ID
+		parentID = &id
+	}
+
+	return current, nil
+}
+
+// GetKnowledgeFolderByID returns a folder owned by the knowledgeDomain.
+func (r *knowledgeRepository) GetKnowledgeFolderByID(
+	ctx context.Context,
+	knowledgeDomainID uint64,
+	id string,
+) (*types.KnowledgeFolder, error) {
+	var folder types.KnowledgeFolder
+	if err := r.db.WithContext(ctx).
+		Where("knowledge_domain_id = ? AND id = ?", knowledgeDomainID, id).
+		First(&folder).Error; err != nil {
+		return nil, err
+	}
+	return &folder, nil
+}
+
+// ListKnowledgeFolders returns the KB folder hierarchy. When document IDs are
+// supplied, only folders containing those documents and their ancestors are
+// returned so document-level authorization does not expose unrelated paths.
+func (r *knowledgeRepository) ListKnowledgeFolders(
+	ctx context.Context,
+	knowledgeDomainID uint64,
+	kbID string,
+	allowedKnowledgeIDs []string,
+) ([]*types.KnowledgeFolder, error) {
+	var folders []*types.KnowledgeFolder
+	if err := r.db.WithContext(ctx).
+		Where("knowledge_domain_id = ? AND knowledge_base_id = ?", knowledgeDomainID, kbID).
+		Order("relative_path ASC").
+		Find(&folders).Error; err != nil {
+		return nil, err
+	}
+	if allowedKnowledgeIDs == nil {
+		return folders, nil
+	}
+	if len(allowedKnowledgeIDs) == 0 || len(folders) == 0 {
+		return []*types.KnowledgeFolder{}, nil
+	}
+
+	var directFolderIDs []string
+	if err := r.db.WithContext(ctx).
+		Model(&types.Knowledge{}).
+		Where(
+			"knowledge_domain_id = ? AND knowledge_base_id = ? AND id IN ? AND folder_id IS NOT NULL",
+			knowledgeDomainID,
+			kbID,
+			allowedKnowledgeIDs,
+		).
+		Distinct().
+		Pluck("folder_id", &directFolderIDs).Error; err != nil {
+		return nil, err
+	}
+
+	byID := make(map[string]*types.KnowledgeFolder, len(folders))
+	for _, folder := range folders {
+		byID[folder.ID] = folder
+	}
+	visible := make(map[string]struct{}, len(directFolderIDs))
+	for _, folderID := range directFolderIDs {
+		for folderID != "" {
+			if _, seen := visible[folderID]; seen {
+				break
+			}
+			visible[folderID] = struct{}{}
+			folder := byID[folderID]
+			if folder == nil || folder.ParentID == nil {
+				break
+			}
+			folderID = *folder.ParentID
+		}
+	}
+
+	result := make([]*types.KnowledgeFolder, 0, len(visible))
+	for _, folder := range folders {
+		if _, ok := visible[folder.ID]; ok {
+			result = append(result, folder)
+		}
+	}
+	return result, nil
+}
+
+// DeleteKnowledgeFolder removes a folder subtree after the service has cleaned
+// all active documents and their external resources. The final active-row
+// check prevents a concurrently uploaded document from being silently moved to
+// the knowledge-base root by the folder foreign key.
+func (r *knowledgeRepository) DeleteKnowledgeFolder(
+	ctx context.Context,
+	knowledgeDomainID uint64,
+	kbID string,
+	folderID string,
+) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var folder types.KnowledgeFolder
+		query := tx.Where(
+			"knowledge_domain_id = ? AND knowledge_base_id = ? AND id = ?",
+			knowledgeDomainID,
+			kbID,
+			folderID,
+		)
+		if tx.Dialector.Name() != "sqlite" {
+			query = query.Clauses(clause.Locking{Strength: "UPDATE"})
+		}
+		if err := query.First(&folder).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrKnowledgeFolderNotFound
+			}
+			return err
+		}
+
+		var folders []*types.KnowledgeFolder
+		if err := tx.Where(
+			"knowledge_domain_id = ? AND knowledge_base_id = ?",
+			knowledgeDomainID,
+			kbID,
+		).Find(&folders).Error; err != nil {
+			return err
+		}
+		folderIDs := collectKnowledgeFolderSubtreeIDs(folders, folderID)
+		if len(folderIDs) == 0 {
+			return ErrKnowledgeFolderNotFound
+		}
+
+		var documentCount int64
+		if err := tx.Model(&types.Knowledge{}).
+			Where(
+				"knowledge_domain_id = ? AND knowledge_base_id = ? AND folder_id IN ?",
+				knowledgeDomainID,
+				kbID,
+				folderIDs,
+			).
+			Count(&documentCount).Error; err != nil {
+			return err
+		}
+		if documentCount > 0 {
+			return ErrKnowledgeFolderNotEmpty
+		}
+
+		var knowledgeIDs []string
+		if err := tx.Unscoped().Model(&types.Knowledge{}).
+			Where(
+				"knowledge_domain_id = ? AND knowledge_base_id = ? AND folder_id IN ?",
+				knowledgeDomainID,
+				kbID,
+				folderIDs,
+			).
+			Pluck("id", &knowledgeIDs).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Where(
+			"knowledge_domain_id = ? AND knowledge_base_id = ? AND resource_type = ? AND resource_id IN ?",
+			knowledgeDomainID,
+			kbID,
+			types.KnowledgeResourceFolder,
+			folderIDs,
+		).Delete(&types.KnowledgeResourceGrant{}).Error; err != nil {
+			return err
+		}
+		if len(knowledgeIDs) > 0 {
+			if err := tx.Where(
+				"knowledge_domain_id = ? AND knowledge_base_id = ? AND resource_type = ? AND resource_id IN ?",
+				knowledgeDomainID,
+				kbID,
+				types.KnowledgeResourceKnowledge,
+				knowledgeIDs,
+			).Delete(&types.KnowledgeResourceGrant{}).Error; err != nil {
+				return err
+			}
+		}
+
+		result := tx.Where(
+			"knowledge_domain_id = ? AND knowledge_base_id = ? AND id IN ?",
+			knowledgeDomainID,
+			kbID,
+			folderIDs,
+		).Delete(&types.KnowledgeFolder{})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return ErrKnowledgeFolderNotFound
+		}
+		return nil
+	})
+}
+
+func collectKnowledgeFolderSubtreeIDs(
+	folders []*types.KnowledgeFolder,
+	rootID string,
+) []string {
+	children := make(map[string][]string, len(folders))
+	exists := false
+	for _, folder := range folders {
+		if folder == nil {
+			continue
+		}
+		if folder.ID == rootID {
+			exists = true
+		}
+		if folder.ParentID != nil {
+			children[*folder.ParentID] = append(children[*folder.ParentID], folder.ID)
+		}
+	}
+	if !exists {
+		return nil
+	}
+
+	result := make([]string, 0, len(folders))
+	queue := []string{rootID}
+	visited := make(map[string]struct{}, len(folders))
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+		if _, ok := visited[current]; ok {
+			continue
+		}
+		visited[current] = struct{}{}
+		result = append(result, current)
+		queue = append(queue, children[current]...)
+	}
+	return result
+}
+
+// applyKnowledgeListFilter applies the optional filter dimensions of
+// KnowledgeListFilter to a GORM query. KnowledgeDomain / knowledge base scoping must be
+// applied by the caller before invoking this helper.
+func applyKnowledgeListFilter(query *gorm.DB, filter types.KnowledgeListFilter) *gorm.DB {
+	if len(filter.AllowedKnowledgeIDs) > 0 {
+		query = query.Where("knowledges.id IN ?", filter.AllowedKnowledgeIDs)
+	}
+	if filter.FilterByFolder {
+		if filter.FolderID == "" {
+			query = query.Where("knowledges.folder_id IS NULL")
+		} else {
+			query = query.Where("knowledges.folder_id = ?", filter.FolderID)
+		}
+	}
+	if len(filter.TagIDs) > 0 {
+		query = query.Where(
+			"knowledges.id IN (SELECT knowledge_id FROM knowledge_tag_relations WHERE tag_id IN (?))",
+			filter.TagIDs,
+		)
+	}
+	if filter.Keyword != "" {
+		// Case-insensitive (LOWER … LIKE LOWER) so keyword search matches
+		// regardless of the stored casing — consistent with the sibling
+		// LOWER() filters in this file and with the client-side `search kb`
+		// / `search sessions` filters. Plain LIKE is case-sensitive in
+		// Postgres, which surprised callers searching with lowercase.
+		escaped := strings.ToLower(escapeLikeKeyword(filter.Keyword))
+		query = query.Where("(LOWER(file_name) LIKE ? OR LOWER(title) LIKE ?)", "%"+escaped+"%", "%"+escaped+"%")
+	}
+	// FileType and Source share the same special-case routing onto `type` for
+	// the "manual" / "url" values, so callers can pick either control.
+	applyTypeOrFileType := func(q *gorm.DB, val string) *gorm.DB {
+		switch val {
+		case "":
+			return q
+		case "manual", "url":
+			return q.Where("type = ?", val)
+		default:
+			return q.Where("file_type = ?", val)
+		}
+	}
+	query = applyTypeOrFileType(query, filter.FileType)
+	if filter.Source != "" {
+		switch filter.Source {
+		case "manual", "url":
+			query = query.Where("type = ?", filter.Source)
+		default:
+			query = query.Where("channel = ?", filter.Source)
+		}
+	}
+	if filter.ParseStatus != "" {
+		query = query.Where("parse_status = ?", filter.ParseStatus)
+	}
+	if !filter.UpdatedFrom.IsZero() {
+		query = query.Where("updated_at >= ?", filter.UpdatedFrom)
+	}
+	if !filter.UpdatedTo.IsZero() {
+		query = query.Where("updated_at <= ?", filter.UpdatedTo)
+	}
+	return query
+}
+
+// ListPagedKnowledgeByKnowledgeBaseID lists all knowledge in a knowledge base with pagination
+func (r *knowledgeRepository) ListPagedKnowledgeByKnowledgeBaseID(
+	ctx context.Context,
+	knowledgeDomainID uint64,
+	kbID string,
+	page *types.Pagination,
+	filter types.KnowledgeListFilter,
+) ([]*types.Knowledge, int64, error) {
+	var knowledges []*types.Knowledge
+	var total int64
+
+	scope := func(q *gorm.DB) *gorm.DB {
+		return applyKnowledgeListFilter(
+			q.Where("knowledge_domain_id = ? AND knowledge_base_id = ?", knowledgeDomainID, kbID),
+			filter,
+		)
+	}
+
+	if err := scope(r.db.WithContext(ctx).Model(&types.Knowledge{})).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	if err := scope(r.db.WithContext(ctx)).
+		Order("created_at DESC").
+		Offset(page.Offset()).
+		Limit(page.Limit()).
+		Find(&knowledges).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return knowledges, total, nil
+}
+
+// UpdateKnowledge updates knowledge
+func (r *knowledgeRepository) UpdateKnowledge(ctx context.Context, knowledge *types.Knowledge) error {
+	err := r.db.WithContext(ctx).Omit(omitFieldsOnUpdate...).Save(knowledge).Error
+	return err
+}
+
+// UpdateKnowledgeBatch updates knowledge items in batch
+func (r *knowledgeRepository) UpdateKnowledgeBatch(ctx context.Context, knowledgeList []*types.Knowledge) error {
+	if len(knowledgeList) == 0 {
+		return nil
+	}
+	return r.db.Debug().WithContext(ctx).Omit(omitFieldsOnUpdate...).Save(knowledgeList).Error
+}
+
+// DeleteKnowledge deletes knowledge
+func (r *knowledgeRepository) DeleteKnowledge(ctx context.Context, knowledgeDomainID uint64, id string) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where(
+			"knowledge_domain_id = ? AND resource_type = ? AND resource_id = ?",
+			knowledgeDomainID,
+			types.KnowledgeResourceKnowledge,
+			id,
+		).Delete(&types.KnowledgeResourceGrant{}).Error; err != nil {
+			return err
+		}
+		return tx.Where(
+			"knowledge_domain_id = ? AND id = ?",
+			knowledgeDomainID,
+			id,
+		).Delete(&types.Knowledge{}).Error
+	})
+}
+
+// DeleteKnowledge deletes knowledge
+func (r *knowledgeRepository) DeleteKnowledgeList(ctx context.Context, knowledgeDomainID uint64, ids []string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where(
+			"knowledge_domain_id = ? AND resource_type = ? AND resource_id IN ?",
+			knowledgeDomainID,
+			types.KnowledgeResourceKnowledge,
+			ids,
+		).Delete(&types.KnowledgeResourceGrant{}).Error; err != nil {
+			return err
+		}
+		return tx.Where(
+			"knowledge_domain_id = ? AND id IN ?",
+			knowledgeDomainID,
+			ids,
+		).Delete(&types.Knowledge{}).Error
+	})
+}
+
+// GetKnowledgeBatch gets knowledge in batch
+func (r *knowledgeRepository) GetKnowledgeBatch(
+	ctx context.Context, knowledgeDomainID uint64, ids []string,
+) ([]*types.Knowledge, error) {
+	var knowledge []*types.Knowledge
+	if err := r.db.WithContext(ctx).Debug().
+		Where("knowledge_domain_id = ? AND id IN ?", knowledgeDomainID, ids).
+		Find(&knowledge).Error; err != nil {
+		return nil, err
+	}
+	return knowledge, nil
+}
+
+// CheckKnowledgeExists checks if knowledge already exists
+func (r *knowledgeRepository) CheckKnowledgeExists(
+	ctx context.Context,
+	knowledgeDomainID uint64,
+	kbID string,
+	params *types.KnowledgeCheckParams,
+) (bool, *types.Knowledge, error) {
+	query := r.db.WithContext(ctx).Model(&types.Knowledge{}).
+		Where("knowledge_domain_id = ? AND knowledge_base_id = ? AND parse_status <> ?", knowledgeDomainID, kbID, "failed")
+	if params.FolderID != nil {
+		if *params.FolderID == "" {
+			query = query.Where("folder_id IS NULL")
+		} else {
+			query = query.Where("folder_id = ?", *params.FolderID)
+		}
+	}
+
+	switch params.Type {
+	case "file":
+		// If file hash exists, prioritize exact match using hash
+		if params.FileHash != "" {
+			var knowledge types.Knowledge
+			err := query.Where("file_hash = ?", params.FileHash).First(&knowledge).Error
+			if err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return false, nil, nil
+				}
+				return false, nil, err
+			}
+			return true, &knowledge, nil
+		}
+
+		// If no hash or hash doesn't match, use filename and size
+		if params.FileName != "" && params.FileSize > 0 {
+			var knowledge types.Knowledge
+			err := query.Where(
+				"file_name = ? AND file_size = ?",
+				params.FileName, params.FileSize,
+			).First(&knowledge).Error
+			if err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return false, nil, nil
+				}
+				return false, nil, err
+			}
+			return true, &knowledge, nil
+		}
+	case "url":
+		// If file hash exists, prioritize exact match using hash
+		if params.FileHash != "" {
+			var knowledge types.Knowledge
+			err := query.Where("type = 'url' AND file_hash = ?", params.FileHash).First(&knowledge).Error
+			if err == nil && knowledge.ID != "" {
+				return true, &knowledge, nil
+			}
+			if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+				return false, nil, err
+			}
+		}
+
+		if params.URL != "" {
+			var knowledge types.Knowledge
+			err := query.Where("type = 'url' AND source = ?", params.URL).First(&knowledge).Error
+			if err == nil && knowledge.ID != "" {
+				return true, &knowledge, nil
+			}
+			if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+				return false, nil, err
+			}
+		}
+		return false, nil, nil
+	}
+
+	// No valid parameters, default to not existing
+	return false, nil, nil
+}
+
+func (r *knowledgeRepository) AminusB(
+	ctx context.Context,
+	AKnowledgeDomainID uint64, A string,
+	BKnowledgeDomainID uint64, B string,
+) ([]string, error) {
+	knowledgeIDs := []string{}
+	subQuery := r.db.Model(&types.Knowledge{}).
+		Where("knowledge_domain_id = ? AND knowledge_base_id = ?", BKnowledgeDomainID, B).Select("file_hash")
+	err := r.db.Model(&types.Knowledge{}).
+		Where("knowledge_domain_id = ? AND knowledge_base_id = ?", AKnowledgeDomainID, A).
+		Where("file_hash NOT IN (?)", subQuery).
+		Pluck("id", &knowledgeIDs).
+		Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return knowledgeIDs, nil
+	}
+	return knowledgeIDs, err
+}
+
+func (r *knowledgeRepository) UpdateKnowledgeColumn(
+	ctx context.Context,
+	id string,
+	column string,
+	value interface{},
+) error {
+	err := r.db.WithContext(ctx).Model(&types.Knowledge{}).Where("id = ?", id).Update(column, value).Error
+	return err
+}
+
+// UpdateKnowledgeColumns writes multiple columns in a single UPDATE so callers
+// that flip related fields together (parse_status + error_message after
+// dead-letter, for example) cannot leave the row half-updated when the second
+// write fails.
+func (r *knowledgeRepository) UpdateKnowledgeColumns(
+	ctx context.Context,
+	id string,
+	values map[string]interface{},
+) error {
+	if len(values) == 0 {
+		return nil
+	}
+	return r.db.WithContext(ctx).Model(&types.Knowledge{}).Where("id = ?", id).Updates(values).Error
+}
+
+// UpdateActiveDeletingKnowledgeColumns only touches rows that are still visible
+// to normal queries and have not moved out of the transient deleting state.
+func (r *knowledgeRepository) UpdateActiveDeletingKnowledgeColumns(
+	ctx context.Context,
+	id string,
+	values map[string]interface{},
+) (bool, error) {
+	if len(values) == 0 {
+		return false, nil
+	}
+	result := r.db.WithContext(ctx).
+		Model(&types.Knowledge{}).
+		Where("id = ? AND parse_status = ?", id, types.ParseStatusDeleting).
+		Updates(values)
+	if result.Error != nil {
+		return false, result.Error
+	}
+	return result.RowsAffected > 0, nil
+}
+
+// FinalizeSubtask atomically decrements pending_subtasks_count and, when
+// the counter reaches zero while parse_status is still 'finalizing',
+// flips the row to 'completed' in the same statement so concurrent
+// subtask completions can't race the promotion.
+//
+// Returns (newCount, promoted, error). promoted is true iff this caller
+// was the one whose UPDATE flipped 'finalizing'→'completed'.
+//
+// The implementation is two statements (atomic decrement, then a guarded
+// promote UPDATE) because GORM does not expose a portable RETURNING
+// across PostgreSQL and SQLite. The promote UPDATE's WHERE clause
+// (parse_status='finalizing' AND pending_subtasks_count=0) makes it
+// safe to run from any number of concurrent callers — at most one wins.
+func (r *knowledgeRepository) FinalizeSubtask(
+	ctx context.Context, id string,
+) (int, bool, error) {
+	now := time.Now()
+	// 1) Atomic decrement, clamped at zero. The `pending_subtasks_count > 0`
+	//    guard is purely a safety net for accounting bugs — under normal
+	//    operation each subtask handler decrements at most once per task,
+	//    so the counter cannot go negative.
+	res := r.db.WithContext(ctx).Model(&types.Knowledge{}).
+		Where("id = ? AND pending_subtasks_count > 0", id).
+		Updates(map[string]interface{}{
+			"pending_subtasks_count": gorm.Expr("pending_subtasks_count - 1"),
+			"updated_at":             now,
+		})
+	if res.Error != nil {
+		return 0, false, res.Error
+	}
+
+	// 2) Guarded promote. EVERY caller unconditionally attempts this after
+	//    decrementing — we must NOT gate it on a separate SELECT of the
+	//    counter. That read can be served by a lagging read-replica (or a
+	//    stale connection snapshot) and return a non-zero value even after
+	//    the counter has truly reached zero on the primary; if every caller
+	//    trusts that stale read, NONE of them runs the promote and the row
+	//    is stranded in `finalizing` forever (the observed "stuck
+	//    pending_subtasks_count" bug). The promote is a WRITE, so it executes
+	//    on the primary and its `pending_subtasks_count = 0` WHERE clause is
+	//    the single authoritative, atomic check on the live row: only the
+	//    caller whose decrement actually brought the counter to zero matches,
+	//    and cancel/delete cannot be clobbered by a late promote.
+	promoteRes := r.db.WithContext(ctx).Model(&types.Knowledge{}).
+		Where("id = ? AND parse_status = ? AND pending_subtasks_count = 0",
+			id, types.ParseStatusFinalizing).
+		Updates(map[string]interface{}{
+			"parse_status": types.ParseStatusCompleted,
+			"processed_at": now,
+			"updated_at":   now,
+		})
+	if promoteRes.Error != nil {
+		return 0, false, promoteRes.Error
+	}
+	promoted := promoteRes.RowsAffected > 0
+
+	// 3) Best-effort re-read of the new count for diagnostics/return value
+	//    only. This read may be replica-stale and is intentionally NOT used
+	//    to decide whether to promote (see above). A read failure here does
+	//    not affect correctness, so we don't propagate it as an error.
+	var snap struct {
+		PendingSubtasksCount int `gorm:"column:pending_subtasks_count"`
+	}
+	if err := r.db.WithContext(ctx).Model(&types.Knowledge{}).
+		Select("pending_subtasks_count").
+		Where("id = ?", id).Take(&snap).Error; err != nil {
+		return 0, promoted, nil
+	}
+	return snap.PendingSubtasksCount, promoted, nil
+}
+
+// SetFinalizing atomically transitions a row from 'processing' to
+// 'finalizing' and seeds pending_subtasks_count. Used by
+// KnowledgePostProcess.Handle as the single durable handoff between
+// the synchronous parse stage and the asynchronous enrichment fan-out.
+//
+// The transition is conditional on parse_status='processing' so a row
+// that the user cancelled / deleted between ProcessDocument finishing
+// and post-process starting will NOT get hijacked into finalizing.
+// Returns whether the transition happened.
+func (r *knowledgeRepository) SetFinalizing(
+	ctx context.Context, id string, expectedSubtasks int,
+) (bool, error) {
+	if expectedSubtasks < 0 {
+		expectedSubtasks = 0
+	}
+	now := time.Now()
+	res := r.db.WithContext(ctx).Model(&types.Knowledge{}).
+		Where("id = ? AND parse_status = ?", id, types.ParseStatusProcessing).
+		Updates(map[string]interface{}{
+			"parse_status":           types.ParseStatusFinalizing,
+			"pending_subtasks_count": expectedSubtasks,
+			"updated_at":             now,
+		})
+	if res.Error != nil {
+		return false, res.Error
+	}
+	return res.RowsAffected > 0, nil
+}
+
+// CountKnowledgeByKnowledgeBaseID counts the number of knowledge items in a knowledge base
+func (r *knowledgeRepository) CountKnowledgeByKnowledgeBaseID(
+	ctx context.Context,
+	knowledgeDomainID uint64,
+	kbID string,
+) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&types.Knowledge{}).
+		Where("knowledge_domain_id = ? AND knowledge_base_id = ?", knowledgeDomainID, kbID).
+		Count(&count).Error
+	return count, err
+}
+
+// CountKnowledgeByStatus counts the number of knowledge items with the specified parse status
+func (r *knowledgeRepository) CountKnowledgeByStatus(
+	ctx context.Context,
+	knowledgeDomainID uint64,
+	kbID string,
+	parseStatuses []string,
+) (int64, error) {
+	if len(parseStatuses) == 0 {
+		return 0, nil
+	}
+
+	var count int64
+	query := r.db.WithContext(ctx).Model(&types.Knowledge{}).
+		Where("knowledge_domain_id = ? AND knowledge_base_id = ?", knowledgeDomainID, kbID).
+		Where("parse_status IN ?", parseStatuses)
+
+	if err := query.Count(&count).Error; err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+// SearchKnowledge searches knowledge items by keyword across the knowledgeDomain
+// If keyword is empty, returns recent files
+// Only returns documents from document-type knowledge bases (excludes FAQ)
+// Returns (results, hasMore, error)
+// FindByMetadataKey finds a knowledge item by a key-value pair in the metadata JSON column.
+// Uses Postgres jsonb operator: metadata->>'key' = 'value'.
+func (r *knowledgeRepository) FindByMetadataKey(
+	ctx context.Context,
+	knowledgeDomainID uint64,
+	kbID string,
+	key string,
+	value string,
+) (*types.Knowledge, error) {
+	var knowledge types.Knowledge
+	err := r.db.WithContext(ctx).
+		Where("knowledge_domain_id = ? AND knowledge_base_id = ? AND deleted_at IS NULL", knowledgeDomainID, kbID).
+		Where("metadata->>? = ?", key, value).
+		First(&knowledge).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &knowledge, nil
+}
+
+func (r *knowledgeRepository) SearchKnowledge(
+	ctx context.Context,
+	knowledgeDomainID uint64,
+	keyword string,
+	offset, limit int,
+	fileTypes []string,
+) ([]*types.Knowledge, bool, error) {
+	// Use raw query to properly map knowledge_base_name
+	type KnowledgeWithKBName struct {
+		types.Knowledge
+		KnowledgeBaseName string `gorm:"column:knowledge_base_name"`
+	}
+
+	var results []KnowledgeWithKBName
+	query := r.db.WithContext(ctx).
+		Table("knowledges").
+		Select("knowledges.*, knowledge_bases.name as knowledge_base_name").
+		Joins("JOIN knowledge_bases ON knowledge_bases.id = knowledges.knowledge_base_id").
+		Where("knowledges.knowledge_domain_id = ?", knowledgeDomainID).
+		Where("knowledge_bases.type = ?", types.KnowledgeBaseTypeDocument).
+		Where("knowledges.deleted_at IS NULL")
+
+	// If keyword is provided, filter by file_name or title (case-insensitive).
+	if keyword != "" {
+		escaped := strings.ToLower(escapeLikeKeyword(keyword))
+		query = query.Where("(LOWER(knowledges.file_name) LIKE ? OR LOWER(knowledges.title) LIKE ?)", "%"+escaped+"%", "%"+escaped+"%")
+	}
+
+	// If fileTypes is provided, filter by file extension or type
+	if len(fileTypes) > 0 {
+		seen := make(map[string]bool)
+		var uniquePatterns []string
+		includeURL := false
+		for _, ft := range fileTypes {
+			ft = strings.ToLower(strings.TrimPrefix(ft, "."))
+			if ft == "url" || ft == "html" {
+				includeURL = true
+				continue
+			}
+			pattern := "%." + ft
+			if !seen[pattern] {
+				seen[pattern] = true
+				uniquePatterns = append(uniquePatterns, pattern)
+			}
+			// Handle common aliases
+			var aliases []string
+			switch ft {
+			case "xlsx":
+				aliases = []string{"%.xls"}
+			case "xls":
+				aliases = []string{"%.xlsx"}
+			case "docx":
+				aliases = []string{"%.doc"}
+			case "doc":
+				aliases = []string{"%.docx"}
+			case "jpg":
+				aliases = []string{"%.jpeg", "%.png"}
+			case "jpeg":
+				aliases = []string{"%.jpg", "%.png"}
+			case "png":
+				aliases = []string{"%.jpg", "%.jpeg"}
+			}
+			for _, alias := range aliases {
+				if !seen[alias] {
+					seen[alias] = true
+					uniquePatterns = append(uniquePatterns, alias)
+				}
+			}
+		}
+		var orConditions []string
+		var args []interface{}
+		for _, p := range uniquePatterns {
+			orConditions = append(orConditions, "LOWER(knowledges.file_name) LIKE ?")
+			args = append(args, p)
+		}
+		if includeURL {
+			orConditions = append(orConditions, "knowledges.type = ?")
+			args = append(args, "url")
+		}
+		if len(orConditions) > 0 {
+			query = query.Where("("+strings.Join(orConditions, " OR ")+")", args...)
+		}
+	}
+
+	// Fetch limit+1 to check if there are more results
+	err := query.Order("knowledges.created_at DESC").
+		Offset(offset).
+		Limit(limit + 1).
+		Scan(&results).Error
+	if err != nil {
+		return nil, false, err
+	}
+
+	// Check if there are more results
+	hasMore := len(results) > limit
+	if hasMore {
+		results = results[:limit]
+	}
+
+	// Convert to []*types.Knowledge
+	knowledges := make([]*types.Knowledge, len(results))
+	for i, r := range results {
+		k := r.Knowledge
+		k.KnowledgeBaseName = r.KnowledgeBaseName
+		knowledges[i] = &k
+	}
+	return knowledges, hasMore, nil
+}
+
+// SearchKnowledgeInScopes searches knowledge items within explicit knowledgeDomain/KB scopes.
+func (r *knowledgeRepository) SearchKnowledgeInScopes(
+	ctx context.Context,
+	scopes []types.KnowledgeSearchScope,
+	keyword string,
+	offset, limit int,
+	fileTypes []string,
+) ([]*types.Knowledge, bool, int64, error) {
+	if len(scopes) == 0 {
+		return nil, false, 0, nil
+	}
+
+	type KnowledgeWithKBName struct {
+		types.Knowledge
+		KnowledgeBaseName string `gorm:"column:knowledge_base_name"`
+	}
+
+	placeholders := make([]string, len(scopes))
+	args := make([]interface{}, 0, len(scopes)*2)
+	for i, s := range scopes {
+		placeholders[i] = "(?,?)"
+		args = append(args, s.KnowledgeDomainID, s.KBID)
+	}
+	scopeCondition := "(knowledges.knowledge_domain_id, knowledges.knowledge_base_id) IN (" + strings.Join(placeholders, ",") + ")"
+
+	query := r.db.WithContext(ctx).
+		Table("knowledges").
+		Select("knowledges.*, knowledge_bases.name as knowledge_base_name").
+		Joins("JOIN knowledge_bases ON knowledge_bases.id = knowledges.knowledge_base_id AND knowledge_bases.knowledge_domain_id = knowledges.knowledge_domain_id").
+		Where(scopeCondition, args...).
+		Where("knowledge_bases.type = ?", types.KnowledgeBaseTypeDocument).
+		Where("knowledges.deleted_at IS NULL")
+
+	if keyword != "" {
+		escaped := strings.ToLower(escapeLikeKeyword(keyword))
+		query = query.Where("(LOWER(knowledges.file_name) LIKE ? OR LOWER(knowledges.title) LIKE ?)", "%"+escaped+"%", "%"+escaped+"%")
+	}
+
+	if len(fileTypes) > 0 {
+		seen := make(map[string]bool)
+		var uniquePatterns []string
+		includeURL := false
+		for _, ft := range fileTypes {
+			ft = strings.ToLower(strings.TrimPrefix(ft, "."))
+			if ft == "url" || ft == "html" {
+				includeURL = true
+				continue
+			}
+			pattern := "%." + ft
+			if !seen[pattern] {
+				seen[pattern] = true
+				uniquePatterns = append(uniquePatterns, pattern)
+			}
+			var aliases []string
+			switch ft {
+			case "xlsx":
+				aliases = []string{"%.xls"}
+			case "xls":
+				aliases = []string{"%.xlsx"}
+			case "docx":
+				aliases = []string{"%.doc"}
+			case "doc":
+				aliases = []string{"%.docx"}
+			case "jpg":
+				aliases = []string{"%.jpeg", "%.png"}
+			case "jpeg":
+				aliases = []string{"%.jpg", "%.png"}
+			case "png":
+				aliases = []string{"%.jpg", "%.jpeg"}
+			}
+			for _, alias := range aliases {
+				if !seen[alias] {
+					seen[alias] = true
+					uniquePatterns = append(uniquePatterns, alias)
+				}
+			}
+		}
+		var orConditions []string
+		var ftArgs []interface{}
+		for _, p := range uniquePatterns {
+			orConditions = append(orConditions, "LOWER(knowledges.file_name) LIKE ?")
+			ftArgs = append(ftArgs, p)
+		}
+		if includeURL {
+			orConditions = append(orConditions, "knowledges.type = ?")
+			ftArgs = append(ftArgs, "url")
+		}
+		if len(orConditions) > 0 {
+			query = query.Where("("+strings.Join(orConditions, " OR ")+")", ftArgs...)
+		}
+	}
+
+	var total int64
+	if err := query.Session(&gorm.Session{}).Count(&total).Error; err != nil {
+		return nil, false, 0, err
+	}
+
+	var results []KnowledgeWithKBName
+	err := query.Order("knowledges.created_at DESC").
+		Offset(offset).
+		Limit(limit + 1).
+		Scan(&results).Error
+	if err != nil {
+		return nil, false, 0, err
+	}
+
+	hasMore := len(results) > limit
+	if hasMore {
+		results = results[:limit]
+	}
+
+	knowledges := make([]*types.Knowledge, len(results))
+	for i, r := range results {
+		k := r.Knowledge
+		k.KnowledgeBaseName = r.KnowledgeBaseName
+		knowledges[i] = &k
+	}
+	return knowledges, hasMore, total, nil
+}
+
+// ListIDsByTagIDs returns all knowledge IDs that have any of the specified tag IDs (OR semantics)
+func (r *knowledgeRepository) ListIDsByTagIDs(
+	ctx context.Context,
+	knowledgeDomainID uint64,
+	kbID string,
+	tagIDs []string,
+) ([]string, error) {
+	if len(tagIDs) == 0 {
+		return nil, nil
+	}
+	var ids []string
+	err := r.db.WithContext(ctx).Model(&types.Knowledge{}).
+		Joins("JOIN knowledge_tag_relations ktr ON knowledges.id = ktr.knowledge_id").
+		Where("knowledges.knowledge_domain_id = ? AND knowledges.knowledge_base_id = ? AND ktr.tag_id IN (?)",
+			knowledgeDomainID, kbID, tagIDs).
+		Distinct("knowledges.id").
+		Pluck("knowledges.id", &ids).Error
+	return ids, err
+}

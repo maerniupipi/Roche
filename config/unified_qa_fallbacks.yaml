@@ -1,0 +1,92 @@
+version: fallback-v1
+
+global:
+  out_of_service:
+    zh-CN: 本系统专注于罗氏诊断公司内部政策查询（包括授权指引DoA、差旅报销T&E、合规政策等）。您的问题不在服务范围内，请提出与公司政策相关的问题。
+    en-US: This system focuses on Roche Diagnostics internal policy queries, including DoA, T&E, and Compliance policies. Your question is outside the service scope; please ask a company-policy-related question.
+  term_unrecognized:
+    zh-CN: 您提到的术语在现有政策文档中未找到对应内容。请确认后重新提问，或联系财务部业务流程管理团队：shanghai.finance_bpm@roche.com
+    en-US: A term in your question could not be matched to the configured policy terminology. Please verify it and ask again, or contact the Finance Business Process Management team at shanghai.finance_bpm@roche.com.
+  out_of_coverage:
+    zh-CN: 您的问题涉及的内容超出了现有政策文档的覆盖范围。如需进一步了解，建议联系财务部业务流程管理团队：shanghai.finance_bpm@roche.com
+    en-US: Your question is outside the coverage of the currently available policy documents. For further assistance, please contact the Finance Business Process Management team at shanghai.finance_bpm@roche.com.
+  route_failed:
+    zh-CN: 抱歉，系统暂时无法判断您的问题所属政策范围。请稍后重试，或补充更多背景信息后重新提问。
+    en-US: Sorry, the system could not determine the applicable policy area. Please try again later or provide more context.
+
+topics:
+  - id: doa
+    agent_id: finance
+    knowledge_base_name_contains:
+      - doa
+    route_keywords:
+      - doa
+      - delegation of authority
+      - 授权手册
+      - 授权委托
+      - 付款
+      - 支付
+      - 采购
+      - 采购合同
+      - 金额
+      - 审批权限
+      - 审批矩阵
+      - 授权矩阵
+    no_match_response:
+      zh-CN: 抱歉，未能在授权手册（DoA）中找到与您问题直接相关的信息。建议您联系财务 BPM 团队获取进一步协助：shanghai.finance_bpm@roche.com
+    answer_disclaimer:
+      zh-CN: 以上信息基于现行授权手册（DoA）。如涉及重大业务决策，请与财务 BPM 团队确认最新版本。
+
+  - id: travel_expense
+    agent_id: finance
+    knowledge_base_name_contains:
+      - t&e
+    route_keywords:
+      - t&e
+      - travel & expense
+      - travel expense
+      - reimbursement
+      - 差旅
+      - 报销
+      - 费用报销
+      - concur
+    no_match_response:
+      zh-CN: |-
+        抱歉，未能在差旅报销政策中找到与您问题直接相关的信息。
+        如需进一步协助，请通过这三种方式咨询：
+        RoSE:https://roche.service-now.com/rose
+        RoVi Chat: RoSE平台右下角实时聊天
+        报销热线: 86 21 3397 1999
+    answer_disclaimer:
+      zh-CN: 以上报销信息基于现行 T&E 政策。具体报销请以实际审批为准，并通过 Concur 系统提交。
+    addenda:
+      - id: concur
+        trigger_keywords:
+          - concur
+          - sap concur
+        response:
+          zh-CN: |-
+            Concur 界面和步骤可能变更；若界面不同，请以最新 newsletter 为准。如需进一步协助，请通过这三种方式咨询：
+            RoSE:https://roche.service-now.com/rose
+            RoVi Chat: RoSE平台右下角实时聊天
+            报销热线: 86 21 3397 1999
+
+  - id: compliance
+    agent_id: compliance
+    knowledge_base_name_contains:
+      - compliance
+      - 合规
+    route_keywords:
+      - compliance
+      - 合规
+      - hcp
+      - hco
+      - cpt
+      - csp
+      - gsd
+      - 医疗卫生专业人士
+      - 医疗卫生组织
+    no_match_response:
+      zh-CN: 抱歉，知识库中暂未检索到与您的提问直接相关的信息，系统无法直接为您提供结论。如需进一步协助，请联系合规团队。
+    answer_disclaimer:
+      zh-CN: 合规要求随相关政策持续优化更新。如需获取进一步协助，请联系合规团队。

@@ -1,0 +1,32 @@
+knowledge_domain_names:
+  - 合规
+  - compliance
+route_keywords:
+  - compliance
+  - 合规
+  - hcp
+  - hco
+  - rdsl
+  - 医疗卫生专业人士
+  - 医疗卫生组织
+description: 负责检索并核实 Compliance 政策、HCP/HCO 互动和禁止性规定相关证据。
+system_prompt_version: compliance-v1
+search_hints:
+  - HCP 与 HCO
+  - 客户招待、会议与赞助
+  - 利益冲突与禁止行为
+  - 事前审批与例外
+research_rules:
+  - 仅处理 Compliance 领域事实，不替代财务子智能体作出结论。
+  - 优先核实禁止行为、强制事前审批、留档、报告义务和例外条件。
+  - 如适用范围或版本存在冲突，应明确报告，不得推断行为被允许。
+evidence_requirements:
+  - 每项合规结论都必须引用授权候选证据集合中的适用政策条款。
+  - 允许或禁止类结论应说明行为主体、活动、条件和适用范围（如证据具备）。
+  - 证据不完整时应明确指出缺失条件，不得作无条件结论。
+allowed_research_tools:
+  - knowledge_search
+  - grep_chunks
+  - get_document_info
+  - list_knowledge_chunks
+  - query_knowledge_graph

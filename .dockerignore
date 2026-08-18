@@ -1,0 +1,79 @@
+# VCS / CI
+.git/
+.gitignore
+.gitattributes
+
+# 编辑器 / IDE 本地配置
+.cursor/
+.claude/
+.codebuddy/
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Python 虚拟环境 / 缓存
+**/.venv/
+.venv_proto/
+**/.python-version
+**/__pycache__/
+**/*.pyc
+
+# Node / 前端
+# The combined frontend image is built from the repository root and needs
+# both source trees. Keep generated dependencies and distributions out.
+**/node_modules/
+frontend/dist/
+frontend-default/dist/
+frontend-admin/dist/
+frontend-app/dist/
+roche-kap-Chrome-Extension/
+
+# 日志 / 临时文件
+logs/
+tmp/
+temp/
+*.log
+*.pid
+
+# 本地构建产物 / 二进制
+RocheKAP
+!RocheKAP
+roche-kap-lite
+/server
+/dist/
+/build/
+
+# 本地数据 / 模型文件
+/models/
+data/files/
+data/*.db
+data/*.db-wal
+data/*.db-shm
+test/data/mswag.txt
+
+# 敏感环境文件。只允许无真实凭据的模板进入构建上下文。
+.env*
+!.env.local.example
+!.env.server-dev.example
+!.env.production.example
+*.pem
+*.key
+*.crt
+*_key
+*_secret
+
+# 大的归档/压缩包
+packages/protoc-*.zip
+!packages/protoc-*-linux-x86_64.zip
+!packages/protoc-*-linux-aarch_64.zip
+!packages/protoc-*-linux-arm.zip
+
+# 本地测试脚本
+configure-ollama.sh
+fix-docker.sh
+/scripts/scale_dev_jobs.sh
+
+# 注意:不要排除 docs/ —— 里面的 docs.go / swagger.json 是 Go 代码依赖的 swagger 包
+# 注意:不要用 *.md 通配排除 —— skills/preloaded/**/SKILL.md 会被打进镜像给 agent 用

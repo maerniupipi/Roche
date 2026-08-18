@@ -1,0 +1,128 @@
+// =============================================================
+//  管理端页面通用骨架样式
+//  --------------------------------------------------------------
+//  - 第一节：基础页面壳（带标题区 + 占位卡片区），适用于 Dashboard
+//            / Roles / AnswerRecords 等说明型页面。
+//  - 第二节：卡片型页面壳（带 header + 中央卡片 + 底部确认按钮），
+//            适用于 ExchangeRate / RecommendQuestions 等表单型页面。
+//  --------------------------------------------------------------
+//  引用方式（在 .vue 的 <style lang="less" scoped> 内）：
+//      @import '@/assets/styles/page-shared.less';
+// =============================================================
+
+
+// ================ 第一节：基础页面壳 ================
+
+.page-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 24px 32px;
+  box-sizing: border-box;
+  background: var(--td-bg-color-container, #fff);
+  overflow: auto;
+}
+
+.page-header {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--td-component-stroke, #e7e7e7);
+}
+
+.page-header h1 {
+  margin: 0 0 8px 0;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--td-text-color-primary, #181818);
+}
+
+.page-header p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--td-text-color-secondary, #666);
+}
+
+.placeholder-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.placeholder-card {
+  padding: 20px;
+  border-radius: 8px;
+  background: var(--td-bg-color-secondarycontainer, #f7f8fa);
+  border: 1px dashed var(--td-component-stroke, #e7e7e7);
+}
+
+.placeholder-card h3 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--td-text-color-primary, #181818);
+}
+
+.placeholder-card p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--td-text-color-secondary, #666);
+}
+
+
+// ================ 第二节：卡片型页面壳 ================
+//
+// 外层卡片容器 + 顶部 header + 中间自适应卡片 + 底部确认按钮的
+// 四段式页面骨架。两个 .exchange-card 取并集属性（flex:1 +
+// padding:20px + overflow-y:auto），以兼容表单型 + 列表型两种内容。
+
+.exchange-page {
+  height: 100%;
+  margin: 20px;
+  background: #fff;
+  border: 1px solid #e7e7e7;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+}
+
+.exchange-page__header {
+  padding: 20px 20px 10px;
+}
+
+.exchange-card {
+  flex: 1;
+  padding: 10px 20px;
+  overflow-y: auto;
+}
+
+.exchange-page-footer {
+  padding: 10px 20px;
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid #e7e7e7;
+}
+
+.exchange-page__confirm {
+  align-self: flex-end;
+  padding: 6px 16px;
+  background: #0b41cd;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 400;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.exchange-page__confirm:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.exchange-page__confirm:disabled {
+  background: #b8c2e1;
+  cursor: not-allowed;
+}

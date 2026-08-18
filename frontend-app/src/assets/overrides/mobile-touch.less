@@ -1,0 +1,26 @@
+.t-button:not(.t-button--sm):not(.t-size-s):not(.t-size-m) {
+  min-height: 44px;
+}
+
+.t-navbar__back,
+.t-navbar__right,
+.t-drawer__close,
+.t-action-sheet__item {
+  min-height: 44px;
+}
+
+@media (hover: none) {
+
+  .t-button:hover,
+  .clickable:hover,
+  a:hover {
+    background-color: inherit;
+    color: inherit;
+  }
+
+  .t-button:active,
+  .clickable:active,
+  a:active {
+    /* 无需额外覆盖 */
+  }
+}

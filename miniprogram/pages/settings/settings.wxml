@@ -1,0 +1,18 @@
+<view class="page">
+  <view class="card">
+    <view class="title">Connect RocheKAP</view>
+    <view class="muted">Use your RocheKAP API endpoint and platform access token.</view>
+
+    <view class="field">
+      <text class="label">API Base URL</text>
+      <input value="{{baseUrl}}" placeholder="https://your-rochekap.example.com" bindinput="onBaseUrlInput" />
+    </view>
+
+    <view class="field">
+      <text class="label">API Key</text>
+      <input value="{{apiKey}}" password placeholder="sk-..." bindinput="onApiKeyInput" />
+    </view>
+
+    <button bindtap="save">Save settings</button>
+  </view>
+</view>

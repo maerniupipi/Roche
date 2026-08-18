@@ -1,0 +1,29 @@
+/* ============================================================
+ * 滚动行为优化
+ * ============================================================
+ * 1. iOS momentum 滚动（-webkit-overflow-scrolling: touch）
+ * 2. 桌面浏览器隐藏滚动条（mobile 原生滚动条更合适）
+ * 3. iOS Safari sticky 兼容兜底（.sticky-ios-fix class）
+ *
+ * 引用路径：src/main.ts 中 import './assets/overrides/scroll.less'
+ * ============================================================ */
+
+/* 1. iOS momentum 滚动（所有可滚动容器） */
+* {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 2. 桌面浏览器隐藏滚动条，保留 mobile 原生滚动条 */
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+
+/* 3. iOS Safari sticky 兼容（14+ 已较好，这里作为兜底） */
+@supports (-webkit-touch-callout: none) {
+  .sticky-ios-fix {
+    position: -webkit-sticky;
+    position: sticky;
+  }
+}

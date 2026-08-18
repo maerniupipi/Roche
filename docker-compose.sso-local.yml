@@ -1,0 +1,126 @@
+# Local SAML SSO integration environment.
+#
+# Purpose: exercise the complete SP-initiated SAML 2.0 login flow (login page
+# -> mock IdP -> /api/v1/auth/saml/acs -> #saml_result) without access to the
+# customer's PingIdentity tenant. The mock IdP is the repository's own
+# cmd/mock-saml-idp (crewjam/saml/samlidp based).
+#
+# Compared with docker-compose.local.yml this file only starts the services
+# required for SAML integration: postgres + redis (Auth Service dependencies),
+# mock-saml-idp and the api-gateway edge. Auth Service (go run ./cmd/auth-service)
+# and the Vite frontends run on the host, matching the repository dev workflow.
+#
+# Usage:
+#   docker compose --env-file .env.sso-local -f docker-compose.sso-local.yml up -d
+#
+# Then on the host, with the SSO variables from SSO对接指南.md §8.3:
+#   go run ./cmd/auth-service
+#   cd frontend && npm run dev
+#
+# Mock IdP endpoints (MOCK_SAML_PUBLIC_URL):
+#   http://127.0.0.1:8091            login form / POST
+#   http://127.0.0.1:8091/sso        SAML SSO endpoint
+#   http://127.0.0.1:8091/metadata   IdP metadata XML
+services:
+  postgres:
+    image: postgres:17.10-bookworm
+    pull_policy: missing
+    container_name: roche-kap-postgres-sso
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    volumes:
+      - postgres-data-sso:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    stop_grace_period: 1m
+
+  redis:
+    image: redis:7.0.15-alpine
+    pull_policy: missing
+    container_name: roche-kap-redis-sso
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data-sso:/data
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    restart: unless-stopped
+
+  mock-saml-idp:
+    image: roche/knowledge-agent-platform-mock-saml-idp:local
+    pull_policy: build
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.mock-saml-idp
+      args:
+        - GO_BASE_IMAGE=${GO_BASE_IMAGE:-golang:1.26.0-bookworm}
+        - GOPROXY=${GOPROXY:-https://goproxy.cn,direct}
+    container_name: roche-kap-mock-saml-idp-sso
+    ports:
+      - "127.0.0.1:${MOCK_SAML_PORT:-8091}:8091"
+    environment:
+      - MOCK_SAML_PUBLIC_URL=${MOCK_SAML_PUBLIC_URL:-http://127.0.0.1:8091}
+      - MOCK_SAML_LOCAL_SP_ENTITY_ID=${SAML_AUTH_SP_ENTITY_ID:-urn:rochekap:local:sp}
+      - MOCK_SAML_LOCAL_ACS_URL=${SAML_AUTH_ACS_URL:-http://127.0.0.1:8088/api/v1/auth/saml/acs}
+      - MOCK_SAML_INTERNAL_SP_ENTITY_ID=${MOCK_SAML_INTERNAL_SP_ENTITY_ID:-}
+      - MOCK_SAML_INTERNAL_ACS_URL=${MOCK_SAML_INTERNAL_ACS_URL:-}
+      - MOCK_SAML_EXTERNAL_SP_ENTITY_ID=${MOCK_SAML_EXTERNAL_SP_ENTITY_ID:-}
+      - MOCK_SAML_EXTERNAL_ACS_URL=${MOCK_SAML_EXTERNAL_ACS_URL:-}
+      - MOCK_SAML_USERNAME=${MOCK_SAML_USERNAME:-admin}
+      - MOCK_SAML_PASSWORD=${MOCK_SAML_PASSWORD:-Admin123!}
+      - MOCK_SAML_EMAIL=${MOCK_SAML_EMAIL:-admin@rochekap.local}
+      - MOCK_SAML_DISPLAY_NAME=${MOCK_SAML_DISPLAY_NAME:-Mock Development User}
+      - MOCK_SAML_DEVELOPER_COUNT=${MOCK_SAML_DEVELOPER_COUNT:-100}
+      - MOCK_SAML_DEVELOPER_PASSWORD=${MOCK_SAML_DEVELOPER_PASSWORD:-Dev12345!}
+      - MOCK_SAML_DEVELOPER_EMAIL_DOMAIN=${MOCK_SAML_DEVELOPER_EMAIL_DOMAIN:-rochekap.local}
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/mock-saml-idp", "healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # Local edge gateway. Auth Service and Vite run on the host; this container
+  # keeps the browser/API route contract identical to deployed environments.
+  # It proxies /api/v1/auth/* to the host-side Auth Service on
+  # host.docker.internal:${AUTH_SERVICE_PORT}.
+  api-gateway:
+    image: roche/knowledge-agent-platform-api-gateway:local
+    pull_policy: build
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.gateway
+      args:
+        - NGINX_BASE_IMAGE=${NGINX_BASE_IMAGE:-nginx:1.28.0-alpine3.21}
+    container_name: roche-kap-api-gateway-sso
+    environment:
+      - GATEWAY_FRONTEND_UPSTREAM=host.docker.internal:5173
+      - GATEWAY_AUTH_UPSTREAM=host.docker.internal:${AUTH_SERVICE_PORT:-8081}
+      - GATEWAY_APP_UPSTREAM=host.docker.internal:${APP_PORT:-8080}
+      - GATEWAY_AUTH_SHARED_SECRET=${AUTH_SERVICE_INTERNAL_SECRET}
+      - GATEWAY_MAX_BODY_SIZE=${GATEWAY_MAX_BODY_SIZE:-100m}
+    ports:
+      - "127.0.0.1:${GATEWAY_PORT:-8088}:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      mock-saml-idp:
+        condition: service_healthy
+    restart: unless-stopped
+
+networks:
+  default:
+    name: roche-kap-network-sso
+    driver: bridge
+
+volumes:
+  postgres-data-sso:
+  redis-data-sso:

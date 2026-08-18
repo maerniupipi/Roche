@@ -1,0 +1,85 @@
+# Local Go backend app service (prebuilt binary + thin image).
+#
+# 日常开发迭代流程（改动代码后快速重建）：
+#   1) .\scripts\docker-build-app.ps1
+#      —— 在 Linux 容器中增量编译（挂载主机 go build/mod/duckdb 缓存），
+#         产出 ./RocheKAP ./migrate ./yanyiwu/ ./.duckdb 到项目根
+#   2) docker compose --env-file .env.local -f docker-compose.local.yml -f docker-compose.local-app.yml up -d --build
+#      —— Dockerfile.app.fast 只 COPY 预编译产物，秒级出镜像
+#
+# 注意：不要在 Docker Desktop (Windows) 上改用 Dockerfile.app +
+# BuildKit cache mount——gRPC-FUSE 对 go mod download/go build 的
+# 大量小文件写入性能极差，会卡死。Dockerfile.app 仅用于 CI/服务器。
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.app.fast
+    image: rochekap-app:local
+    pull_policy: missing
+    container_name: roche-kap-app-dev
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres123!@#
+      - DB_NAME=RocheKAP
+      - DB_DRIVER=postgres
+      - REDIS_ADDR=redis:6379
+      - REDIS_PASSWORD=redis123!@#
+      - JWT_SECRET=rochekap-local-jwt-secret
+      - SYSTEM_AES_KEY=rochekap-local-system-key-32byte
+      - STORAGE_TYPE=local
+      - LOCAL_STORAGE_BASE_DIR=/data/files
+      - RETRIEVE_DRIVER=milvus
+      - MILVUS_ADDRESS=milvus:19530
+      - NEO4J_ENABLE=false
+      - DOCREADER_TRANSPORT=grpc
+      - DOCREADER_ADDR=docreader:50051
+      - GIN_MODE=debug
+      - AUTH_REGISTRATION_ENABLE=true
+      - AUTH_REGISTRATION_DEFAULT_ROLE=viewer
+      - AUTH_REGISTRATION_DEV_ROLE_SELECTION=true
+      - SAML_AUTH_ENABLE=true
+      - SAML_AUTH_IDP_METADATA_URL=http://saml-idp:8080/simplesaml/saml2/idp/metadata.php
+      - SAML_AUTH_SP_ENTITY_ID=urn:rochekap:sp
+      - SAML_AUTH_ACS_URL=http://127.0.0.1:8080/api/v1/auth/saml/acs
+      - SAML_AUTH_PROVIDER_DISPLAY_NAME=Mock SSO
+      - SAML_AUTH_AUTO_PROVISION=true
+      - SAML_AUTH_SIGN_REQUEST=false
+      - SAML_AUTH_ALLOW_IDP_INITIATED=true
+      - SAML_AUTH_ALLOW_EPHEMERAL_CERT=true
+      - SAML_AUTH_SP_CERT_FILE=
+      - SAML_AUTH_SP_KEY_FILE=
+      # File-based Workday mock (developer env only)
+      - WORKDAY_ENABLE=true
+      - WORKDAY_PROVIDER=mock
+      - WORKDAY_CONNECTION_KEY=local-mock
+      - WORKDAY_MOCK_FILE=config/mock/workday.json
+      - WORKDAY_PAGE_SIZE=200
+      - WORKDAY_REQUEST_TIMEOUT=30s
+      - SSRF_WHITELIST_EXTRA=127.0.0.1,localhost,saml-idp,milvus,postgres,redis,docreader
+      # 本机可直连 Google，无需代理；如走代理请取消注释并确保 1111 端口代理已启动
+      # - HTTP_PROXY=http://host.docker.internal:1111
+      # - HTTPS_PROXY=http://host.docker.internal:1111
+      - NO_PROXY=localhost,127.0.0.1,postgres,redis,milvus,docreader,saml-idp,.local
+      # Internal service-to-service auth for GDrive sync → upload API
+      - INTERNAL_SERVICE_BASE_URL=http://localhost:8080
+      - INTERNAL_SERVICE_TOKEN=rochekap-internal-service-token-dev
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - app-uploads-dev:/data/files
+    networks:
+      - roche-kap-network-dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  app-uploads-dev:

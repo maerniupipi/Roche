@@ -1,0 +1,27 @@
+ARG NODE_BASE_IMAGE=node:24.4.1-bookworm-slim
+FROM ${NODE_BASE_IMAGE}
+
+ARG APT_MIRROR=""
+ARG NPM_REGISTRY="https://registry.npmmirror.com"
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates && \
+    if [ -n "$APT_MIRROR" ]; then \
+        sed -Ei "s@https?://deb.debian.org@${APT_MIRROR}@g; s@https?://security.debian.org@${APT_MIRROR}@g" \
+            /etc/apt/sources.list.d/debian.sources && \
+        apt-get update; \
+    fi && \
+    apt-get install -y --no-install-recommends curl nginx gettext-base && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV NPM_CONFIG_REGISTRY=${NPM_REGISTRY}
+
+COPY frontend/nginx.conf /etc/nginx/templates/default.conf.template
+COPY frontend/docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh && rm -f /etc/nginx/sites-enabled/default
+
+WORKDIR /src/frontend
+
+# All frontend sources and their node_modules are mounted by Compose. Build
+# into /tmp so generated assets do not modify any Git working tree.
+CMD ["/bin/sh", "-ec", "cd /src/frontend && if [ -f package-lock.json ]; then npm ci; else npm install --no-package-lock; fi && npm run build -- --outDir /tmp/frontend-dist && cd /src/frontend-default && if [ -f package-lock.json ]; then npm ci; else npm install --no-package-lock; fi && npm run build -- --outDir /tmp/frontend-default-dist && cd /src/frontend-admin && if [ -f package-lock.json ]; then npm ci; else npm install --no-package-lock; fi && npm run build -- --outDir /tmp/frontend-admin-dist && cd /src/frontend-app && if [ -f package-lock.json ]; then npm ci; else npm install --no-package-lock; fi && npm run build -- --outDir /tmp/frontend-app-dist && rm -rf /usr/share/nginx/html/* && mkdir -p /usr/share/nginx/html/default /usr/share/nginx/html/admin /usr/share/nginx/html/app && cp -a /tmp/frontend-dist/. /usr/share/nginx/html/ && cp -a /tmp/frontend-default-dist/. /usr/share/nginx/html/default/ && cp -a /tmp/frontend-admin-dist/. /usr/share/nginx/html/admin/ && cp -a /tmp/frontend-app-dist/. /usr/share/nginx/html/app/ && exec /docker-entrypoint.sh"]

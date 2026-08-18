@@ -1,0 +1,44 @@
+ARG GO_BASE_IMAGE=golang:1.26.0-bookworm
+ARG DEBIAN_RUNTIME_IMAGE=debian:12.12-slim
+FROM ${GO_BASE_IMAGE} AS builder
+
+ARG APT_MIRROR=""
+ARG GOPROXY_ARG=https://goproxy.cn,direct
+ENV GOPROXY=${GOPROXY_ARG} CGO_ENABLED=1
+
+RUN if [ -n "$APT_MIRROR" ]; then \
+        sed -Ei "s@https?://deb.debian.org@${APT_MIRROR}@g; s@https?://security.debian.org@${APT_MIRROR}@g" \
+            /etc/apt/sources.list.d/debian.sources; \
+    fi && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends git build-essential ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN go build -trimpath -ldflags="-s -w" -o /out/auth-service ./cmd/auth-service
+
+FROM ${DEBIAN_RUNTIME_IMAGE}
+
+ARG APT_MIRROR=""
+
+RUN if [ -n "$APT_MIRROR" ]; then \
+        sed -Ei "s@https?://deb.debian.org@${APT_MIRROR}@g; s@https?://security.debian.org@${APT_MIRROR}@g" \
+            /etc/apt/sources.list.d/debian.sources; \
+    fi && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates tzdata curl && \
+    rm -rf /var/lib/apt/lists/* && \
+    useradd --system --uid 10001 --create-home authservice
+
+WORKDIR /app
+COPY --from=builder /out/auth-service /app/auth-service
+COPY --from=builder /src/config /app/config
+
+USER 10001
+EXPOSE 8081
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD curl --fail --silent http://127.0.0.1:8081/health >/dev/null || exit 1
+ENTRYPOINT ["/app/auth-service"]

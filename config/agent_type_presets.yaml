@@ -1,0 +1,94 @@
+# Agent Type Presets for Smart-Reasoning Mode
+#
+# When a user creates/edits a custom agent and picks "smart-reasoning" mode,
+# they can additionally pick an "agent type" from the list below. Each type
+# bundles a recommended system prompt template and tool allowlist so the user
+# doesn't have to configure everything.
+#
+# A user can always override any auto-filled value — the preset only seeds
+# the form.
+#
+# Knowledge access is never configured by a preset. At runtime every agent
+# receives the current user's effective knowledge grants.
+
+agent_type_presets:
+  # --------------------------------------------------------------------------
+  # RAG Q&A — classic evidence-based retrieval over chunk indexes.
+  # Best for document / FAQ knowledge bases.
+  # --------------------------------------------------------------------------
+  - id: "rag-qa"
+    i18n:
+      default:
+        label: "RAG Q&A"
+        description: "Evidence-based retrieval over document chunks. Best for document or FAQ knowledge bases."
+      zh-CN:
+        label: "RAG 问答"
+        description: "基于文档分块的检索式问答，适合文档 / FAQ 知识库。"
+      zh-TW:
+        label: "RAG 問答"
+        description: "基於文件分塊的檢索式問答，適合文件 / FAQ 知識庫。"
+    config:
+      system_prompt_id: "progressive_rag_agent"
+      temperature: 0.7
+      max_iterations: 30
+      # `thinking` and `todo_write` are intentionally NOT included by default.
+      # They are useful for multi-step planning / self-reflection, but most
+      # users don't need them for single-turn Q&A and they noticeably bloat
+      # token usage. Enable them manually in the tool list when needed.
+      allowed_tools:
+        - "knowledge_search"
+        - "grep_chunks"
+        - "list_knowledge_chunks"
+        - "get_document_info"
+      retain_retrieval_history: false
+      faq_priority_enabled: true
+
+  # --------------------------------------------------------------------------
+  # Data Analysis — SQL / statistics over tabular files (CSV / Excel) in the KB.
+  # Retrieval capabilities (vector/keyword/…) are largely irrelevant here — the
+  # agent drives `data_schema` + `data_analysis` tools against uploaded files,
+  # so we gate on supported_file_types rather than KB capabilities.
+  # --------------------------------------------------------------------------
+  - id: "data-analysis"
+    i18n:
+      default:
+        label: "Data Analysis"
+        description: "SQL queries and statistics over tabular files (CSV / Excel). Pair with a KB that holds data files."
+      zh-CN:
+        label: "数据分析"
+        description: "对 CSV / Excel 等表格文件执行 SQL 查询和统计分析。请绑定包含数据文件的知识库。"
+      zh-TW:
+        label: "數據分析"
+        description: "對 CSV / Excel 等表格檔案執行 SQL 查詢和統計分析。請綁定包含數據檔案的知識庫。"
+    config:
+      system_prompt_id: "data_analyst"
+      temperature: 0.3
+      max_iterations: 30
+      # `thinking` / `todo_write` are opt-in for data-analysis too. Enable
+      # manually if the user wants explicit reflection or to break a long
+      # analysis into tracked sub-tasks.
+      allowed_tools:
+        - "data_schema"
+        - "data_analysis"
+      # retain_retrieval_history is irrelevant here — data-analysis has no
+      # retrieval tools in allowed_tools. Leave defaults.
+      web_search_enabled: false
+      supported_file_types:
+        - "csv"
+        - "xlsx"
+
+  # --------------------------------------------------------------------------
+  # Custom — no preset; user configures everything by hand.
+  # --------------------------------------------------------------------------
+  - id: "custom"
+    i18n:
+      default:
+        label: "Custom"
+        description: "Full control. Manually pick tools and prompts."
+      zh-CN:
+        label: "自定义"
+        description: "完全自定义：自行选择工具和提示词。"
+      zh-TW:
+        label: "自訂"
+        description: "完全自訂：自行選擇工具和提示詞。"
+    # No `config:` block → preset applies no auto-fill.

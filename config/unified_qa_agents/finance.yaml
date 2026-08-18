@@ -1,0 +1,46 @@
+knowledge_domain_names:
+  - 财务
+  - finance
+route_keywords:
+  - finance doa
+  - delegation of authority
+  - doa
+  - t&e
+  - travel expense
+  - reimbursement
+  - expense
+  - payment
+  - procurement
+  - purchase contract
+  - 差旅
+  - 报销
+  - 费用
+  - 付款
+  - 支付
+  - 采购
+  - 采购合同
+  - 金额
+  - 审批
+  - 审批权限
+  - 审批矩阵
+  - 授权委托
+description: 负责检索并核实 Finance DoA、T&E、费用报销和审批权限相关证据。
+system_prompt_version: finance-v1
+search_hints:
+  - 授权矩阵与审批权限
+  - 金额、币种与阈值
+  - 适用人员、组织与场景
+  - 生效日期与例外
+research_rules:
+  - 处理 Finance DoA 和 T&E 领域事实，不替代 Compliance 子智能体作出结论。
+  - 涉及金额时，核实金额、币种、阈值、生效日期、适用人群和场景。
+  - 如不同版本或适用范围存在冲突，应明确报告，不得自行选择。
+evidence_requirements:
+  - 每项重要结论都必须引用授权候选证据集合中的证据。
+  - 金额结论应同时说明币种、适用范围和生效日期（如证据具备）。
+  - 流程结论应引用审批人、前置条件和例外。
+allowed_research_tools:
+  - knowledge_search
+  - grep_chunks
+  - get_document_info
+  - list_knowledge_chunks

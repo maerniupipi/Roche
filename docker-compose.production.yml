@@ -1,0 +1,114 @@
+# Production override for docker-compose.server-dev.yml.
+# It removes source builds/mounts, uses immutable CI images, and keeps
+# management ports on loopback. Start it only through production_server.sh.
+services:
+  # 当前默认入口前端（生产对外暴露端口；新版前端挂在 /default/ 下）
+  frontend:
+    image: ${FRONTEND_IMAGE:?FRONTEND_IMAGE must be a fixed production image}
+    pull_policy: missing
+    build: !reset null
+    volumes: !reset []
+    ports: !reset []
+
+  app:
+    image: ${APP_IMAGE:?APP_IMAGE must be a fixed production image}
+    pull_policy: missing
+    build: !reset null
+    working_dir: /app
+    ports: !reset []
+    volumes: !override
+      - data-files:/data/files
+      - docreader-tmp:/tmp/docreader:ro
+    environment:
+      - AUTH_PASSWORD_LOGIN_ENABLE=false
+      - AUTH_REGISTRATION_ENABLE=false
+      - AUTH_REGISTRATION_DEV_ROLE_SELECTION=false
+
+  auth-service-internal:
+    image: ${AUTH_SERVICE_IMAGE:?AUTH_SERVICE_IMAGE must be a fixed production image}
+    pull_policy: missing
+    build: !reset null
+    volumes: !override
+      - ${SAML_INTERNAL_SP_CERT_HOST_PATH:?SAML_INTERNAL_SP_CERT_HOST_PATH is required}:/run/secrets/saml-sp.crt:ro
+      - ${SAML_INTERNAL_SP_KEY_HOST_PATH:?SAML_INTERNAL_SP_KEY_HOST_PATH is required}:/run/secrets/saml-sp.key:ro
+    ports: !reset []
+    environment:
+      - AUTH_SERVICE_ENV=production
+      - AUTH_SERVICE_ZONE=internal
+      - AUTH_SERVICE_INTERNAL_SECRET=${AUTH_INTERNAL_SERVICE_SECRET:?AUTH_INTERNAL_SERVICE_SECRET is required}
+      - AUTH_REFRESH_COOKIE_SECURE=true
+      - SAML_AUTH_ALLOW_EPHEMERAL_CERT=false
+      - SAML_AUTH_SP_CERT_FILE=/run/secrets/saml-sp.crt
+      - SAML_AUTH_SP_KEY_FILE=/run/secrets/saml-sp.key
+      - AUTH_PASSWORD_LOGIN_ENABLE=false
+      - AUTH_REGISTRATION_ENABLE=false
+      - AUTH_REGISTRATION_DEV_ROLE_SELECTION=false
+
+  auth-service-external:
+    image: ${AUTH_SERVICE_IMAGE:?AUTH_SERVICE_IMAGE must be a fixed production image}
+    pull_policy: missing
+    build: !reset null
+    volumes: !override
+      - ${SAML_EXTERNAL_SP_CERT_HOST_PATH:?SAML_EXTERNAL_SP_CERT_HOST_PATH is required}:/run/secrets/saml-sp.crt:ro
+      - ${SAML_EXTERNAL_SP_KEY_HOST_PATH:?SAML_EXTERNAL_SP_KEY_HOST_PATH is required}:/run/secrets/saml-sp.key:ro
+    ports: !reset []
+    environment:
+      - AUTH_SERVICE_ENV=production
+      - AUTH_SERVICE_ZONE=external
+      - AUTH_SERVICE_INTERNAL_SECRET=${AUTH_EXTERNAL_SERVICE_SECRET:?AUTH_EXTERNAL_SERVICE_SECRET is required}
+      - AUTH_REFRESH_COOKIE_SECURE=true
+      - SAML_AUTH_ALLOW_EPHEMERAL_CERT=false
+      - SAML_AUTH_SP_CERT_FILE=/run/secrets/saml-sp.crt
+      - SAML_AUTH_SP_KEY_FILE=/run/secrets/saml-sp.key
+      - AUTH_PASSWORD_LOGIN_ENABLE=false
+      - AUTH_REGISTRATION_ENABLE=false
+      - AUTH_REGISTRATION_DEV_ROLE_SELECTION=false
+
+  api-gateway-internal:
+    image: ${API_GATEWAY_IMAGE:?API_GATEWAY_IMAGE must be a fixed production image}
+    pull_policy: missing
+    build: !reset null
+    ports: !override
+      - "${GATEWAY_INTERNAL_BIND:?GATEWAY_INTERNAL_BIND is required}:${GATEWAY_INTERNAL_PORT:-8088}:8080"
+    environment:
+      - GATEWAY_AUTH_SHARED_SECRET=${AUTH_INTERNAL_SERVICE_SECRET:?AUTH_INTERNAL_SERVICE_SECRET is required}
+
+  api-gateway-external:
+    image: ${API_GATEWAY_IMAGE:?API_GATEWAY_IMAGE must be a fixed production image}
+    pull_policy: missing
+    build: !reset null
+    ports: !override
+      - "${GATEWAY_EXTERNAL_BIND:-0.0.0.0}:${GATEWAY_EXTERNAL_PORT:-80}:8080"
+    environment:
+      - GATEWAY_AUTH_SHARED_SECRET=${AUTH_EXTERNAL_SERVICE_SECRET:?AUTH_EXTERNAL_SERVICE_SECRET is required}
+
+  docreader:
+    image: ${DOCREADER_IMAGE:?DOCREADER_IMAGE must be a fixed production image}
+    pull_policy: missing
+    build: !reset null
+    volumes: !override
+      - docreader-tmp:/tmp/docreader
+
+  minio:
+    ports: !override
+      - "127.0.0.1:${MINIO_PORT:-9000}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
+
+  neo4j:
+    ports: !override
+      - "127.0.0.1:7474:7474"
+      - "127.0.0.1:7687:7687"
+
+  milvus:
+    ports: !override
+      - "127.0.0.1:19530:19530"
+      - "127.0.0.1:9091:9091"
+
+  langfuse-minio:
+    ports: !override
+      - "127.0.0.1:${LANGFUSE_MINIO_S3_PORT:-9100}:9000"
+      - "127.0.0.1:${LANGFUSE_MINIO_CONSOLE_PORT:-9101}:9001"
+
+  langfuse-web:
+    ports: !override
+      - "127.0.0.1:${LANGFUSE_WEB_PORT:-3000}:3000"

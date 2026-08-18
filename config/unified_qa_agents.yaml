@@ -1,0 +1,16 @@
+version: catalog-v5
+master_agent_id: unified-master
+max_selected_agents: 2
+fallback_agent_ids:
+  - finance
+  - compliance
+agents:
+  - id: finance
+    name: 财务子智能体
+    enabled: true
+    profile: unified_qa_agents/finance.yaml
+
+  - id: compliance
+    name: 合规子智能体
+    enabled: true
+    profile: unified_qa_agents/compliance.yaml

@@ -1,0 +1,64 @@
+{
+  "org_units": [
+    {
+      "external_id": "WD-CHINA",
+      "code": "CN",
+      "name": "RD China",
+      "org_type": "company",
+      "status": "active",
+      "attributes": {
+        "country": "CN"
+      }
+    },
+    {
+      "external_id": "WD-CHINA-FIN",
+      "parent_external_id": "WD-CHINA",
+      "code": "CN-FIN",
+      "name": "Finance",
+      "org_type": "department",
+      "status": "active",
+      "attributes": {
+        "cost_center": "CC-1001"
+      }
+    },
+    {
+      "external_id": "WD-CHINA-IT",
+      "parent_external_id": "WD-CHINA",
+      "code": "CN-IT",
+      "name": "Informatics",
+      "org_type": "department",
+      "status": "active",
+      "attributes": {
+        "cost_center": "CC-2001"
+      }
+    }
+  ],
+  "workers": [
+    {
+      "external_id": "WD-WORKER-ADMIN",
+      "primary_org_external_id": "WD-CHINA-IT",
+      "corporate_email": "admin@rochekap.local",
+      "status": "active",
+      "attributes": {
+        "display_name": "Local Mock Admin"
+      }
+    },
+    {
+      "external_id": "WD-WORKER-VIEWER",
+      "primary_org_external_id": "WD-CHINA-FIN",
+      "corporate_email": "viewer@rochekap.local",
+      "status": "active",
+      "attributes": {
+        "display_name": "Local Mock Viewer"
+      }
+    }
+  ],
+  "generated_workers": {
+    "count": 100,
+    "username_prefix": "developer",
+    "email_domain": "rochekap.local",
+    "external_id_prefix": "WD-WORKER-DEVELOPER-",
+    "org_external_ids": ["WD-CHINA-IT", "WD-CHINA-FIN"],
+    "manager_external_worker_id": "WD-WORKER-ADMIN"
+  }
+}
